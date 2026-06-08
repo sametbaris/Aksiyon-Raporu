@@ -703,13 +703,12 @@ elif st.session_state.current_view == "bbx_paneli":
             border-right: none !important; 
         }
         
-        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET) */
-        .bbx-table thead tr:nth-child(1) th { top: 0px !important; }
+        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI */
+        .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
         .bbx-table thead tr:nth-child(2) th { top: 44px !important; }
         
-        /* Satırın en altına temas eden hücrelere (rowspan=2 olanlar ve 2. satırdakiler) gölge veriyoruz */
-        .bbx-table thead tr:nth-child(1) th[rowspan="2"], 
-        .bbx-table thead tr:nth-child(2) th { 
+        /* DÜZELTME: Sadece alt tarafa temas eden başlık hücrelerine gölge eklendi */
+        .bbx-table thead th.shadow-cell { 
             box-shadow: 0 -2px 0 var(--dynamic-bg-color, #ffffff), 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; 
             border-bottom: 1px solid rgba(128,128,128,0.1) !important; 
         }
@@ -730,7 +729,10 @@ elif st.session_state.current_view == "bbx_paneli":
             vertical-align: middle; 
         }
         
-        .plat-sep { border-left: 2px solid rgba(128,128,128,0.15) !important; }
+        /* AYRAÇ ÇİZGİSİNİN DÜZELTİLMİŞ HALİ (TD İÇİN ÖZEL BELİRLEYİCİLİK) */
+        .bbx-table th.plat-sep, .bbx-table td.plat-sep { 
+            border-left: 2px solid rgba(128, 128, 128, 0.3) !important; 
+        }
         
         .bbx-sku { color: #0078ff !important; font-weight: bold; font-size: 13px; } 
         .pill-satici { background-color: var(--pill-default-bg); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 20px; padding: 4px 10px; font-weight: 600; font-size: 11px; display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -781,10 +783,10 @@ elif st.session_state.current_view == "bbx_paneli":
             <table class="bbx-table">
                 <thead>
                     <tr>
-                        <th rowspan="2">Barkod</th>
-                        <th rowspan="2">HB Kod</th>
-                        <th rowspan="2">SKU</th>
-                        <th rowspan="2">Alt Grup</th>
+                        <th rowspan="2" class="shadow-cell">Barkod</th>
+                        <th rowspan="2" class="shadow-cell">HB Kod</th>
+                        <th rowspan="2" class="shadow-cell">SKU</th>
+                        <th rowspan="2" class="shadow-cell">Alt Grup</th>
                         <th colspan="4" style="padding: 6px 0; height: 44px;">
                             <img src="{ty_l}" class="header-logo logo-light" style="height: 32px;">
                             <img src="{ty_d}" class="header-logo logo-dark" style="height: 32px;">
@@ -795,14 +797,14 @@ elif st.session_state.current_view == "bbx_paneli":
                         </th>
                     </tr>
                     <tr>
-                        <th style="width: 45px;">Durum</th>
-                        <th>#1</th>
-                        <th>#2</th>
-                        <th>#3</th>
-                        <th class="plat-sep" style="width: 45px;">Durum</th>
-                        <th>#1</th>
-                        <th>#2</th>
-                        <th>#3</th>
+                        <th class="shadow-cell" style="width: 45px;">Durum</th>
+                        <th class="shadow-cell">#1</th>
+                        <th class="shadow-cell">#2</th>
+                        <th class="shadow-cell">#3</th>
+                        <th class="plat-sep shadow-cell" style="width: 45px;">Durum</th>
+                        <th class="shadow-cell">#1</th>
+                        <th class="shadow-cell">#2</th>
+                        <th class="shadow-cell">#3</th>
                     </tr>
                 </thead>
                 <tbody>
