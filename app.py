@@ -11,7 +11,7 @@ from google.oauth2.service_account import Credentials
 import io
 
 # ================= SAYFA AYARLARI =================
-st.set_page_config(page_title="Aksiyon Raporu & BBX", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Aksiyon Raporu", layout="wide", initial_sidebar_state="collapsed")
 
 # ================= SESSION (OTURUM) YÖNETİMİ =================
 if "current_view" not in st.session_state:
@@ -19,7 +19,7 @@ if "current_view" not in st.session_state:
 if "bbx_authenticated" not in st.session_state:
     st.session_state.bbx_authenticated = False
 
-# ================= ORİJİNAL ANA SAYFA FONKSİYONLARI =================
+# ================= ORİJİNAL FONKSİYONLAR =================
 def fetch_product_link(barcode, is_hepsiburada=False):
     if is_hepsiburada:
         search_url = f"https://www.hepsiburada.com/ara?q={barcode}"
@@ -35,17 +35,23 @@ def fetch_product_link(barcode, is_hepsiburada=False):
                 html_content = response.text
                 match = re.search(r'<a[^>]+href="(/[^"]+-p-[^"]+)"[^>]*>', html_content)
                 if match:
-                    return f"https://www.hepsiburada.com{match.group(1)}"
+                    product_path = match.group(1)
+                    return f"https://www.hepsiburada.com{product_path}"
+                
+                # Alternatif arama
                 match2 = re.search(r'<a[^>]+href="(/magaza/[^"]+)"[^>]*>', html_content)
                 if match2:
-                    return f"https://www.hepsiburada.com{match2.group(1)}"
-        except Exception:
+                    product_path = match2.group(1)
+                    return f"https://www.hepsiburada.com{product_path}"
+                    
+        except Exception as e:
             pass
         return ""
+        
     else:
         search_url = f"https://public-mdc.trendyol.com/discovery-web-searchgw-service/v2/api/infinite-scroll/sr?q={barcode}"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json, text/plain, */*",
             "Origin": "https://www.trendyol.com",
             "Referer": f"https://www.trendyol.com/sr?q={barcode}"
@@ -55,50 +61,66 @@ def fetch_product_link(barcode, is_hepsiburada=False):
             if response.status_code == 200:
                 data = response.json()
                 if data.get("result", {}).get("products"):
-                    return f"https://www.trendyol.com{data['result']['products'][0]['url']}"
-        except Exception:
+                    product = data["result"]["products"][0]
+                    return f"https://www.trendyol.com{product['url']}"
+        except Exception as e:
             pass
         return ""
 
 def process_links(df):
-    if 'TY Link' not in df.columns: df['TY Link'] = ""
-    if 'HB Link' not in df.columns: df['HB Link'] = ""
+    if 'TY Link' not in df.columns:
+        df['TY Link'] = ""
+    if 'HB Link' not in df.columns:
+        df['HB Link'] = ""
         
     missing_ty = df[df['TY Link'].isna() | (df['TY Link'] == '')]
     missing_hb = df[df['HB Link'].isna() | (df['HB Link'] == '')]
+    
     total_missing = len(missing_ty) + len(missing_hb)
     
-    if total_missing == 0: return df, 0
+    if total_missing == 0:
+        return df, 0
         
     progress_bar = st.progress(0)
     status_text = st.empty()
+    
     processed = 0
     
+    # Trendyol linklerini çek
     if len(missing_ty) > 0:
         status_text.text(f"Trendyol linkleri aranıyor... (0/{len(missing_ty)})")
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_idx = {executor.submit(fetch_product_link, row['Barkod'], False): idx for idx, row in missing_ty.iterrows()}
+            future_to_idx = {executor.submit(fetch_product_link, row['Barkod'], False): idx 
+                           for idx, row in missing_ty.iterrows()}
+            
             for future in concurrent.futures.as_completed(future_to_idx):
                 idx = future_to_idx[future]
                 try:
                     link = future.result()
-                    if link: df.at[idx, 'TY Link'] = link
-                except Exception: pass
+                    if link:
+                        df.at[idx, 'TY Link'] = link
+                except Exception:
+                    pass
                 processed += 1
                 progress_bar.progress(processed / total_missing)
                 status_text.text(f"Linkler aranıyor... ({processed}/{total_missing})")
                 time.sleep(0.1)
 
+    # Hepsiburada linklerini çek
     if len(missing_hb) > 0:
         status_text.text(f"Hepsiburada linkleri aranıyor... (0/{len(missing_hb)})")
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-            future_to_idx = {executor.submit(fetch_product_link, row['Barkod'], True): idx for idx, row in missing_hb.iterrows()}
+            future_to_idx = {executor.submit(fetch_product_link, row['Barkod'], True): idx 
+                           for idx, row in missing_hb.iterrows()}
+            
             for future in concurrent.futures.as_completed(future_to_idx):
                 idx = future_to_idx[future]
                 try:
                     link = future.result()
-                    if link: df.at[idx, 'HB Link'] = link
-                except Exception: pass
+                    if link:
+                        df.at[idx, 'HB Link'] = link
+                except Exception:
+                    pass
                 processed += 1
                 progress_bar.progress(processed / total_missing)
                 status_text.text(f"Linkler aranıyor... ({processed}/{total_missing})")
@@ -106,22 +128,26 @@ def process_links(df):
 
     progress_bar.empty()
     status_text.empty()
+    
     return df, processed
 
 def get_table_download_link(df, filename="aksiyon_raporu_guncel.csv"):
     csv = df.to_csv(index=False)
     b64 = base64.b64encode(csv.encode()).decode()
-    return f'<a href="data:file/csv;base64,{b64}" download="{filename}" style="display: inline-block; padding: 0.5em 1em; color: #ffffff; background-color: #4facfe; border-radius: 5px; text-decoration: none; font-weight: bold; text-align: center; width: 100%; margin-top: 10px;">Tüm Tabloyu İndir (CSV)</a>'
+    href = f'<a href="data:file/csv;base64,{b64}" download="{filename}" class="download-button">Tüm Tabloyu İndir (CSV)</a>'
+    return href
 
 @st.cache_data(ttl=600)
 def load_data(sheet_id, sheet_name="Stok"):
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
-    try: return pd.read_csv(url)
+    try:
+        df = pd.read_csv(url)
+        return df
     except Exception as e:
         st.error(f"Veri çekme hatası: {e}")
         return None
 
-# ================= BBX PANELİ İÇİN FONKSİYON =================
+# ================= BBX DATA FONKSİYONU =================
 def get_bbx_data_from_sheets():
     try:
         scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -132,29 +158,106 @@ def get_bbx_data_from_sheets():
         st.error(f"Google Sheets'e bağlanırken hata: {e}")
         return []
 
-# ================= EKRAN YÖNLENDİRMELERİ =================
+# ================= EKRAN YÖNLENDİRMESİ =================
 if st.session_state.current_view == "ana_sayfa":
-    # ---------------------------------------------------------
-    # EKRAN 1: AKSİYON RAPORU (ANA SAYFA - ORİJİNAL)
-    # ---------------------------------------------------------
-    
-    # Orijinal başlık ve tarih
-    st.markdown("<h1 style='text-align: left; background: linear-gradient(90deg, #f8f9fa, #e9ecef); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: sans-serif; font-weight: 800; font-size: 2.5rem;'>Aksiyon Raporu</h1>", unsafe_allow_html=True)
+
+    # --- ORİJİNAL CSS ---
+    st.markdown("""
+    <style>
+        /* Ana Başlık */
+        .main-title {
+            text-align: left;
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-weight: 800;
+            font-size: 2.5rem;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        /* Metrik Kartları */
+        .metric-card {
+            background-color: #262730;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid #3a3b45;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 10px 0;
+        }
+        .metric-label {
+            font-size: 1.1rem;
+            color: #a0aabf;
+            font-weight: 600;
+        }
+        .metric-subtitle {
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        /* DataFrame Özelleştirme */
+        .dataframe {
+            font-size: 12px !important;
+        }
+        
+        /* Butonlar */
+        .stButton>button {
+            width: 100%;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .download-button {
+            display: inline-block;
+            padding: 0.5em 1em;
+            color: #ffffff;
+            background-color: #4facfe;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .download-button:hover {
+            background-color: #00f2fe;
+            color: #ffffff;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # --- ORİJİNAL BAŞLIK VE GÜNCELLEME METNİ ---
+    st.markdown("<h1 class='main-title'>Aksiyon Raporu</h1>", unsafe_allow_html=True)
     st.write(f"Son Güncelleme: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
-    
-    # BBX Butonu (Standart Streamlit butonu, CSS'siz)
+
+    # --- YENİ EKLENEN BBX BUTONU ---
     if st.button("🔐 BBX Paneline Giriş Yap (Şifreli)", use_container_width=True):
         st.session_state.current_view = "bbx_paneli"
         st.rerun()
+
     st.markdown("---")
 
+    # --- ORİJİNAL TABLO MANTIĞI ---
     SHEET_ID = "142yZJ90wUoU9YF48S9N2-T9_6lZg6iC1w9EAS7l9XW4"
     df = load_data(SHEET_ID)
 
     if df is not None:
+        
         with st.sidebar:
             st.header("🔗 Link İşlemleri")
             st.write("Eksik olan Trendyol ve Hepsiburada linklerini otomatik çekin.")
+            
             if st.button("Linkleri Çek", type="primary"):
                 with st.spinner("Linkler aranıyor..."):
                     updated_df, count = process_links(df)
@@ -163,8 +266,10 @@ if st.session_state.current_view == "ana_sayfa":
                         st.session_state['updated_df'] = updated_df
                     else:
                         st.info("Tüm linkler zaten mevcut veya bulunamadı.")
+            
             if 'updated_df' in st.session_state:
                 st.markdown(get_table_download_link(st.session_state['updated_df'], "aksiyon_raporu_linkli.csv"), unsafe_allow_html=True)
+                
             st.markdown("---")
             st.header("Filtreler")
 
@@ -174,23 +279,43 @@ if st.session_state.current_view == "ana_sayfa":
             zam_sayisi = len(df[df['Önerilen Aksiyon'].str.contains('Fiyat Artır', na=False)])
             stok_uyari = len(df[df['Önerilen Aksiyon'].str.contains('Stok Çek', na=False)])
 
-            # Orijinal metrik kartları (Senin gönderdiğin app (10).py'deki CSS'li hali)
             col1, col2, col3, col4 = st.columns(4)
             
-            metric_css = """
-            <style>
-            .m-card { background-color: #262730; border-radius: 10px; padding: 20px; text-align: center; border: 1px solid #3a3b45; }
-            .m-val { font-size: 2.5rem; font-weight: bold; margin: 10px 0; }
-            .m-lbl { font-size: 1.1rem; color: #a0aabf; }
-            .m-sub { font-size: 0.9rem; color: #6c757d; }
-            </style>
-            """
-            st.markdown(metric_css, unsafe_allow_html=True)
-            
-            with col1: st.markdown(f'<div class="m-card"><div class="m-lbl">Toplam Aksiyon Bekleyen</div><div class="m-val" style="color: #4facfe;">{toplam_aksiyon}</div><div class="m-sub">İncelenmesi gereken ürün</div></div>', unsafe_allow_html=True)
-            with col2: st.markdown(f'<div class="m-card"><div class="m-lbl">İndirim Önerisi</div><div class="m-val" style="color: #00f2fe;">{indirim_sayisi}</div><div class="m-sub">Rakiplerin altına inmek için</div></div>', unsafe_allow_html=True)
-            with col3: st.markdown(f'<div class="m-card"><div class="m-lbl">Zam Önerisi</div><div class="m-val" style="color: #ff9a9e;">{zam_sayisi}</div><div class="m-sub">Kar marjını artırmak için</div></div>', unsafe_allow_html=True)
-            with col4: st.markdown(f'<div class="m-card"><div class="m-lbl">Stok Tükendi</div><div class="m-val" style="color: #fecfef;">{stok_uyari}</div><div class="m-sub">Acil stok girişi gerekenler</div></div>', unsafe_allow_html=True)
+            with col1:
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Toplam Aksiyon Bekleyen</div>
+                        <div class="metric-value" style="color: #4facfe;">{toplam_aksiyon}</div>
+                        <div class="metric-subtitle">İncelenmesi gereken ürün</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+            with col2:
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">İndirim Önerisi</div>
+                        <div class="metric-value" style="color: #00f2fe;">{indirim_sayisi}</div>
+                        <div class="metric-subtitle">Rakiplerin altına inmek için</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+            with col3:
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Zam Önerisi</div>
+                        <div class="metric-value" style="color: #ff9a9e;">{zam_sayisi}</div>
+                        <div class="metric-subtitle">Kar marjını artırmak için</div>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+            with col4:
+                st.markdown(f"""
+                    <div class="metric-card">
+                        <div class="metric-label">Stok Tükendi</div>
+                        <div class="metric-value" style="color: #fecfef;">{stok_uyari}</div>
+                        <div class="metric-subtitle">Acil stok girişi gerekenler</div>
+                    </div>
+                """, unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
 
@@ -212,7 +337,13 @@ if st.session_state.current_view == "ana_sayfa":
             tab1, tab2 = st.tabs(["📋 Detaylı Aksiyon Listesi", "📈 Trend Analizi (Yakında)"])
 
             with tab1:
-                st.dataframe(filtered_df, use_container_width=True, height=600, hide_index=True)
+                st.dataframe(
+                    filtered_df,
+                    use_container_width=True,
+                    height=600,
+                    hide_index=True
+                )
+                
                 final_df = filtered_df if (search_term or alt_grup_filter or aksiyon_filter) else df
                 st.markdown(get_table_download_link(final_df), unsafe_allow_html=True)
 
@@ -220,15 +351,15 @@ if st.session_state.current_view == "ana_sayfa":
                 st.info("Trend analizi ve grafikler bu sekmede yer alacaktır.")
                 
         else:
-            st.error("'Önerilen Aksiyon' sütunu bulunamadı.")
+            st.error("'Önerilen Aksiyon' sütunu bulunamadı. Lütfen Google Sheets dosyasındaki sütun isimlerini kontrol edin.")
             st.dataframe(df.head())
 
 elif st.session_state.current_view == "bbx_paneli":
     # ---------------------------------------------------------
     # EKRAN 2: BBX PANELİ (ŞİFRELİ ALAN)
     # ---------------------------------------------------------
-    st.markdown("<h1 style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem; font-weight: 800; font-family: sans-serif;'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
-    st.write("Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.")
+    st.markdown("<h1 style='background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem; font-weight: 800; font-family: sans-serif; margin-bottom: 0.5rem;'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='color: var(--text-color); opacity: 0.7; font-size: 1.1rem; margin-bottom: 1rem; font-family: sans-serif;'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.</p>", unsafe_allow_html=True)
     
     if st.button("🔙 Aksiyon Raporuna Geri Dön", use_container_width=True):
         st.session_state.current_view = "ana_sayfa"
