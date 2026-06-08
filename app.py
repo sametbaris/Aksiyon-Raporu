@@ -686,7 +686,7 @@ elif st.session_state.current_view == "bbx_paneli":
         .bbx-table-wrapper:hover::-webkit-scrollbar-thumb { background-color: rgba(128, 128, 128, 0.15) !important; }
         .bbx-table-wrapper::-webkit-scrollbar-thumb:hover { background-color: rgba(128, 128, 128, 0.20) !important; }
         
-        .bbx-table { width: 100%; table-layout: auto; border-collapse: collapse !important; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-color); border: none !important; }
+        .bbx-table { width: 100%; table-layout: auto; border-collapse: separate !important; border-spacing: 0 !important; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-color); border: none !important; }
         
         .bbx-table thead th { 
             position: sticky; 
@@ -703,9 +703,22 @@ elif st.session_state.current_view == "bbx_paneli":
             border-right: none !important; 
         }
         
-        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET - SIFIR BOŞLUK) */
-        .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
-        .bbx-table thead tr:nth-child(2) th { top: 44px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: none !important; }
+        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET) */
+        .bbx-table thead tr:nth-child(1) th { top: 0px !important; }
+        .bbx-table thead tr:nth-child(2) th { top: 44px !important; }
+        
+        /* Satırın en altına temas eden hücrelere (rowspan=2 olanlar ve 2. satırdakiler) gölge veriyoruz */
+        .bbx-table thead tr:nth-child(1) th[rowspan="2"], 
+        .bbx-table thead tr:nth-child(2) th { 
+            box-shadow: 0 -2px 0 var(--dynamic-bg-color, #ffffff), 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; 
+            border-bottom: 1px solid rgba(128,128,128,0.1) !important; 
+        }
+        
+        /* Logolu üst başlıkların sadece alt çizgisi kalsın, gölge olmasın */
+        .bbx-table thead tr:nth-child(1) th[colspan="4"] { 
+            box-shadow: none !important; 
+            border-bottom: 1px solid rgba(128,128,128,0.1) !important; 
+        }
         
         .bbx-table td { 
             border-top: none !important; 
