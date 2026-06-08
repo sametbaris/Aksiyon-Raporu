@@ -19,7 +19,6 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
     
-    /* AKSİYON RAPORU BAŞLIĞI */
     .main-title {
         text-align: left;
         background: linear-gradient(90deg, #f8f9fa, #e9ecef);
@@ -31,7 +30,6 @@ st.markdown("""
         margin-bottom: 0.5rem;
     }
     
-    /* BBX PANELİ BAŞLIĞI */
     .bbx-title {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         -webkit-background-clip: text;
@@ -50,7 +48,6 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
     }
 
-    /* ANA SAYFA KARTLARI (Aksiyon Raporu) */
     .metric-card {
         background-color: #262730;
         border-radius: 10px;
@@ -109,24 +106,12 @@ def get_bbx_data():
         st.error(f"BBX Google Sheets'e bağlanırken hata: {e}")
         return []
 
-
-# ================= GÜVENLİ VE SABİT BAŞLIK ALANI =================
+# ================= BAŞLIK ALANI =================
 if st.session_state.current_view == "ana_sayfa":
     st.markdown("<h1 class='main-title'>Aksiyon Raporu</h1>", unsafe_allow_html=True)
-    
-    # Butonu yan yana sıkıştırmak yerine tam genişlikte şık bir üst bar olarak koyduk
-    if st.button("🔐 BBX Paneline Giriş Yap (Şifreli)", use_container_width=True):
-        st.session_state.current_view = "bbx_paneli"
-        st.rerun()
 else:
     st.markdown("<h1 class='bbx-title'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
     st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.</p>", unsafe_allow_html=True)
-    
-    if st.button("🔙 Aksiyon Raporuna Geri Dön", use_container_width=True):
-        st.session_state.current_view = "ana_sayfa"
-        st.rerun()
-
-st.markdown("---")
 
 # ================= EKRAN YÖNLENDİRMELERİ =================
 
@@ -134,6 +119,17 @@ if st.session_state.current_view == "ana_sayfa":
     # ---------------------------------------------------------
     # EKRAN 1: AKSİYON RAPORU (ANA SAYFA - HERKESE AÇIK)
     # ---------------------------------------------------------
+    
+    # 1. Son Güncelleme Yazısı ve Hemen Altında Buton Konumu
+    st.write(f"⏱️ Son Güncelleme: {datetime.now().strftime('%d.%m.%Y %H:%M:%S')}")
+    
+    # İSTEDİĞİN DEĞİŞİKLİK TAM OLARAK BURADA:
+    if st.button("🔐 BBX Paneline Giriş Yap (Şifreli)", use_container_width=True):
+        st.session_state.current_view = "bbx_paneli"
+        st.rerun()
+        
+    st.markdown("---")
+
     data = get_stok_data()
 
     if data:
@@ -170,6 +166,14 @@ elif st.session_state.current_view == "bbx_paneli":
     # ---------------------------------------------------------
     # EKRAN 2: BBX PANELİ (ŞİFRELİ ALAN)
     # ---------------------------------------------------------
+    
+    # BBX Panelindeyken de geri dönme butonunu en üste koyuyoruz ki kaybolmasın
+    if st.button("🔙 Aksiyon Raporuna Geri Dön", use_container_width=True):
+        st.session_state.current_view = "ana_sayfa"
+        st.rerun()
+        
+    st.markdown("---")
+
     if not st.session_state.bbx_authenticated:
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
