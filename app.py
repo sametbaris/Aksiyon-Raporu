@@ -676,7 +676,7 @@ elif st.session_state.current_view == "bbx_paneli":
             border-radius: 8px; 
             padding: 0px; 
             overflow: auto; 
-            max-height: 65vh; 
+            max-height: 60vh; 
             margin-top: 5px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
         }
