@@ -205,15 +205,19 @@ def get_gspread_client():
         print(f"Auth Error: {e}")
         return None
 
-# ================= BBX KİMLİK DOĞRULAMA (YENİ EKLENDİ) =================
+# ================= BBX İÇİN DÜZELTİLMİŞ KİMLİK DOĞRULAMA =================
 def get_bbx_data_from_sheets():
     try:
-        scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-        credentials = Credentials.from_service_account_file("service_account.json", scopes=scopes)
-        client = gspread.authorize(credentials)
-        return client.open("Aksiyon_Guncel").worksheet("BBX").get_all_values()
+        # HATA BURADAYDI! Artık senin kendi fonksiyonunu ve ID'ni kullanıyor
+        client = get_gspread_client()
+        if not client:
+            st.error("Google Sheets istemcisi oluşturulamadı. Kimlik bilgilerinizi kontrol edin.")
+            return []
+        
+        # Dosya ID'si üzerinden gitmek ismiyle gitmekten çok daha güvenlidir
+        return client.open_by_key(SHEET_ID).worksheet("BBX").get_all_values()
     except Exception as e:
-        st.error(f"Google Sheets'e bağlanırken hata: {e}")
+        st.error(f"Google Sheets BBX verisi çekilirken hata: {e}")
         return []
 
 # ================= ZİYARETÇİ TAKİP =================
@@ -508,7 +512,6 @@ if st.session_state.current_view == "ana_sayfa":
 
     with col_update:
         if update_text: 
-            # IŞTE BURASI ÇOK ÖNEMLİ: float:right olan update yazısının yanına buton sıkışmasın diye clear atıyoruz.
             st.markdown(f'''
                 <div class="update-badge">🔄 {update_text}</div>
                 <div style="clear: both; height: 10px;"></div>
@@ -516,7 +519,6 @@ if st.session_state.current_view == "ana_sayfa":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
-        # VE BBX BUTONUNU TAM OLARAK O METNİN ALTINA, GÖZÜKÜR BİR ŞEKİLDE BASIYORUZ!
         if st.button("🔐 BBX Paneli", use_container_width=True):
             st.session_state.current_view = "bbx_paneli"
             st.rerun()
@@ -691,16 +693,6 @@ elif st.session_state.current_view == "bbx_paneli":
             elif pwd:
                 st.error("❌ Hatalı şifre!")
     else:
-        def get_bbx_data_from_sheets():
-            try:
-                scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
-                credentials = Credentials.from_service_account_file("service_account.json", scopes=scopes)
-                client = gspread.authorize(credentials)
-                return client.open("Aksiyon_Guncel").worksheet("BBX").get_all_values()
-            except Exception as e:
-                st.error(f"Google Sheets'e bağlanırken hata: {e}")
-                return []
-
         raw_data = get_bbx_data_from_sheets()
 
         if raw_data:
