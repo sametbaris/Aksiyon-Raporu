@@ -152,7 +152,7 @@ def get_bbx_data_from_sheets():
     try:
         scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
         credentials = Credentials.from_service_account_file("service_account.json", scopes=scopes)
-        client = gspread.authorize(credentials)
+        client = gspread.authorize(service_account.json)
         return client.open("Aksiyon_Guncel").worksheet("BBX").get_all_values()
     except Exception as e:
         st.error(f"Google Sheets'e bağlanırken hata: {e}")
