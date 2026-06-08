@@ -9,7 +9,6 @@ import io
 st.set_page_config(page_title="Aksiyon Raporu & BBX", layout="wide", initial_sidebar_state="collapsed")
 
 # ================= SESSION (OTURUM) YÖNETİMİ =================
-# Kullanıcının hangi ekranda olduğunu ve şifre girip girmediğini hafızada tutuyoruz
 if "current_view" not in st.session_state:
     st.session_state.current_view = "ana_sayfa"
 if "bbx_authenticated" not in st.session_state:
@@ -29,8 +28,7 @@ st.markdown("""
         font-family: 'Inter', sans-serif;
         font-weight: 800;
         font-size: 2.5rem;
-        margin-bottom: 0;
-        padding-bottom: 0;
+        margin-bottom: 0.5rem;
     }
     
     /* BBX PANELİ BAŞLIĞI */
@@ -88,8 +86,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= GOOGLE SHEETS FONKSİYONLARI =================
-
-# 1. Ana Sayfa (Stok) İçin Veri Çekme (Cache'li)
 @st.cache_data(ttl=60)
 def get_stok_data():
     try:
@@ -102,7 +98,6 @@ def get_stok_data():
         st.error(f"Google Sheets'e bağlanırken hata oluştu: {e}")
         return []
 
-# 2. BBX Paneli İçin Veri Çekme (Cache'siz - Anlık)
 def get_bbx_data():
     try:
         scopes = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
@@ -115,27 +110,21 @@ def get_bbx_data():
         return []
 
 
-# ================= BAŞLIK VE GEÇİŞ BUTONU ALANI =================
-col_title, col_btn = st.columns([0.85, 0.15])
-
-with col_title:
-    if st.session_state.current_view == "ana_sayfa":
-        st.markdown("<h1 class='main-title'>Aksiyon Raporu</h1>", unsafe_allow_html=True)
-    else:
-        st.markdown("<h1 class='bbx-title'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
-        st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.</p>", unsafe_allow_html=True)
-
-with col_btn:
-    # Butonu başlıkla hizalamak için boşluk bırakıyoruz
-    st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
-    if st.session_state.current_view == "ana_sayfa":
-        if st.button("🔐 BBX Paneli", use_container_width=True):
-            st.session_state.current_view = "bbx_paneli"
-            st.rerun()
-    else:
-        if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
-            st.session_state.current_view = "ana_sayfa"
-            st.rerun()
+# ================= GÜVENLİ VE SABİT BAŞLIK ALANI =================
+if st.session_state.current_view == "ana_sayfa":
+    st.markdown("<h1 class='main-title'>Aksiyon Raporu</h1>", unsafe_allow_html=True)
+    
+    # Butonu yan yana sıkıştırmak yerine tam genişlikte şık bir üst bar olarak koyduk
+    if st.button("🔐 BBX Paneline Giriş Yap (Şifreli)", use_container_width=True):
+        st.session_state.current_view = "bbx_paneli"
+        st.rerun()
+else:
+    st.markdown("<h1 class='bbx-title'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
+    st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.</p>", unsafe_allow_html=True)
+    
+    if st.button("🔙 Aksiyon Raporuna Geri Dön", use_container_width=True):
+        st.session_state.current_view = "ana_sayfa"
+        st.rerun()
 
 st.markdown("---")
 
@@ -148,68 +137,30 @@ if st.session_state.current_view == "ana_sayfa":
     data = get_stok_data()
 
     if data:
-        # Veriyi DataFrame'e çevir
         headers = data[0]
         df = pd.DataFrame(data[1:], columns=headers)
         
         if "Önerilen Aksiyon" in df.columns:
-            # Özet verileri hesapla
             toplam_aksiyon = len(df[df["Önerilen Aksiyon"].str.strip() != ""])
             indirim_sayisi = len(df[df["Önerilen Aksiyon"].str.contains("Fiyat Düş", na=False)])
             zam_sayisi = len(df[df["Önerilen Aksiyon"].str.contains("Fiyat Artır", na=False)])
             stok_uyari = len(df[df["Önerilen Aksiyon"].str.contains("Stok Çek", na=False)])
 
-            # Metrik Kartları
             col1, col2, col3, col4 = st.columns(4)
             
             with col1:
-                st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Toplam Aksiyon Bekleyen</div>
-                        <div class="metric-value" style="color: #4facfe;">{toplam_aksiyon}</div>
-                        <div class="metric-subtitle">İncelenmesi gereken ürün</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                st.markdown(f'<div class="metric-card"><div class="metric-label">Toplam Aksiyon Bekleyen</div><div class="metric-value" style="color: #4facfe;">{toplam_aksiyon}</div><div class="metric-subtitle">İncelenmesi gereken ürün</div></div>', unsafe_allow_html=True)
             with col2:
-                st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">İndirim Önerisi</div>
-                        <div class="metric-value" style="color: #00f2fe;">{indirim_sayisi}</div>
-                        <div class="metric-subtitle">Rakiplerin altına inmek için</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                st.markdown(f'<div class="metric-card"><div class="metric-label">İndirim Önerisi</div><div class="metric-value" style="color: #00f2fe;">{indirim_sayisi}</div><div class="metric-subtitle">Rakiplerin altına inmek için</div></div>', unsafe_allow_html=True)
             with col3:
-                st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Zam Önerisi</div>
-                        <div class="metric-value" style="color: #ff9a9e;">{zam_sayisi}</div>
-                        <div class="metric-subtitle">Kar marjını artırmak için</div>
-                    </div>
-                """, unsafe_allow_html=True)
-                
+                st.markdown(f'<div class="metric-card"><div class="metric-label">Zam Önerisi</div><div class="metric-value" style="color: #ff9a9e;">{zam_sayisi}</div><div class="metric-subtitle">Kar marjını artırmak için</div></div>', unsafe_allow_html=True)
             with col4:
-                st.markdown(f"""
-                    <div class="metric-card">
-                        <div class="metric-label">Stok Tükendi</div>
-                        <div class="metric-value" style="color: #fecfef;">{stok_uyari}</div>
-                        <div class="metric-subtitle">Acil stok girişi gerekenler</div>
-                    </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f'<div class="metric-card"><div class="metric-label">Stok Tükendi</div><div class="metric-value" style="color: #fecfef;">{stok_uyari}</div><div class="metric-subtitle">Acil stok girişi gerekenler</div></div>', unsafe_allow_html=True)
 
             st.markdown("<br>", unsafe_allow_html=True)
-            
-            # Tablo Görünümü
             st.markdown("### 📋 Detaylı Aksiyon Listesi")
             
-            # Tablo için özel stillendirme
-            st.dataframe(
-                df,
-                use_container_width=True,
-                height=600,
-                hide_index=True
-            )
+            st.dataframe(df, use_container_width=True, height=600, hide_index=True)
         else:
             st.error("'Önerilen Aksiyon' sütunu bulunamadı. Lütfen Google Sheets dosyanızı kontrol edin.")
     else:
@@ -220,24 +171,21 @@ elif st.session_state.current_view == "bbx_paneli":
     # EKRAN 2: BBX PANELİ (ŞİFRELİ ALAN)
     # ---------------------------------------------------------
     if not st.session_state.bbx_authenticated:
-        # ŞİFRE EKRANI
         st.markdown("<br><br>", unsafe_allow_html=True)
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            st.info("Bu alana erişim kısıtlanmıştır. Lütfen yönetici şifresini giriniz.")
+            st.info("ℹ️ Bu alana erişim kısıtlanmıştır. Lütfen yönetici şifresini giriniz.")
             pwd = st.text_input("Giriş Şifresi:", type="password")
             if pwd == "mobese":
                 st.session_state.bbx_authenticated = True
-                st.success("Şifre doğru! Sisteme giriş yapılıyor...")
+                st.success("✅ Şifre doğru! Giriş yapılıyor...")
                 st.rerun()
             elif pwd:
                 st.error("❌ Hatalı şifre!")
     else:
-        # ŞİFRE DOĞRUYSA BBX PANELİNİ GÖSTER
         raw_data = get_bbx_data()
 
         if raw_data:
-            # EXCEL ÇIKTILARI İÇİN LİSTELER
             all_export_data = []
             ty_alarm_data = []
             hb_alarm_data = []
@@ -321,7 +269,6 @@ elif st.session_state.current_view == "bbx_paneli":
                 hb_raw_s2 = str(row[12]).strip().lower()
                 hb_raw_s3 = str(row[14]).strip().lower()
 
-                # ALARM MANTIĞI VE EXCEL İÇİN DURUM METİNLERİ
                 def is_ty_store(seller_name): return "trendyol" in seller_name or "braun shop" in seller_name
                 ty_status_text = ""
                 if is_ty_store(ty_raw_s1): 
@@ -346,14 +293,12 @@ elif st.session_state.current_view == "bbx_paneli":
                     hb_dot = "dot-red"
                     hb_status_text = "Kritik: Buybox Kaybedildi (Kırmızı)"
 
-                # 1. TÜM VERİLERİ ANA EXCEL İÇİN KAYDET
                 all_export_data.append({
                     "Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup,
                     "TY Durum": ty_status_text, "TY Satıcı 1": str(row[4]).strip(), "TY Fiyat 1": str(row[5]).strip(), "TY Satıcı 2": str(row[6]).strip(), "TY Fiyat 2": str(row[7]).strip(), "TY Satıcı 3": str(row[8]).strip(), "TY Fiyat 3": str(row[9]).strip(),
                     "HB Durum": hb_status_text, "HB Satıcı 1": str(row[10]).strip(), "HB Fiyat 1": str(row[11]).strip(), "HB Satıcı 2": str(row[12]).strip(), "HB Fiyat 2": str(row[13]).strip(), "HB Satıcı 3": str(row[14]).strip(), "HB Fiyat 3": str(row[15]).strip()
                 })
                 
-                # 2. TRENDYOL ALARM FİLTRESİ
                 if ty_dot in ["dot-yellow", "dot-red"]:
                     ty_alarm_data.append({
                         "Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup, "Alarm Durumu": ty_status_text,
@@ -362,7 +307,6 @@ elif st.session_state.current_view == "bbx_paneli":
                         "TY Satıcı 3": str(row[8]).strip(), "TY Fiyat 3": str(row[9]).strip()
                     })
 
-                # 3. HEPSİBURADA ALARM FİLTRESİ
                 if hb_dot in ["dot-yellow", "dot-red"]:
                     hb_alarm_data.append({
                         "Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup, "Alarm Durumu": hb_status_text,
@@ -371,7 +315,6 @@ elif st.session_state.current_view == "bbx_paneli":
                         "HB Satıcı 3": str(row[14]).strip(), "HB Fiyat 3": str(row[15]).strip()
                     })
 
-                # HAP VE HTML TABLO OLUŞTURMA İŞLEMLERİ
                 def get_pill_satici(val):
                     val = val.strip() if val else "-"
                     if val == "-" or val.lower() == "nan": return "-"
@@ -402,7 +345,6 @@ elif st.session_state.current_view == "bbx_paneli":
                 
             html_table += "</tbody></table></div>"
             
-            # EXCEL BYTE DÖNÜŞÜMLERİ
             buffer_all = io.BytesIO()
             with pd.ExcelWriter(buffer_all, engine='openpyxl') as w: pd.DataFrame(all_export_data).to_excel(w, index=False)
             
@@ -412,7 +354,6 @@ elif st.session_state.current_view == "bbx_paneli":
             buffer_hb = io.BytesIO()
             with pd.ExcelWriter(buffer_hb, engine='openpyxl') as w: pd.DataFrame(hb_alarm_data).to_excel(w, index=False)
 
-            # 3'LÜ HİZALI AKSİYON BUTONLARI ALANI
             col1, col2, col3 = st.columns([0.30, 0.35, 0.35])
             
             with col1:
@@ -433,9 +374,7 @@ elif st.session_state.current_view == "bbx_paneli":
                 else:
                     st.success("✨ Hepsiburada Buybox Kusursuz!")
 
-            # TABLOYU EKRANA BASMA
             clean_html = html_table.replace('\n', '')
             st.markdown(clean_html, unsafe_allow_html=True)
-
         else:
             st.error("❌ Google Sheets tablosunda veri bulunamadı veya satırlar tamamen boş!")
