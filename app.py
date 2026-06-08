@@ -536,6 +536,7 @@ if st.session_state.current_view == "ana_sayfa":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
+        # POP-UP (MODAL) TETİKLEYİCİSİ
         if st.button("🔐 BBX Paneli", use_container_width=True):
             if not st.session_state.bbx_authenticated:
                 login_dialog()
@@ -685,7 +686,7 @@ elif st.session_state.current_view == "bbx_paneli":
         .bbx-table-wrapper:hover::-webkit-scrollbar-thumb { background-color: rgba(128, 128, 128, 0.15) !important; }
         .bbx-table-wrapper::-webkit-scrollbar-thumb:hover { background-color: rgba(128, 128, 128, 0.20) !important; }
         
-        .bbx-table { width: 100%; table-layout: auto; border-collapse: separate !important; border-spacing: 0 !important; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-color); border: none !important; }
+        .bbx-table { width: 100%; table-layout: auto; border-collapse: collapse !important; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-color); border: none !important; }
         
         .bbx-table thead th { 
             position: sticky; 
@@ -702,9 +703,9 @@ elif st.session_state.current_view == "bbx_paneli":
             border-right: none !important; 
         }
         
-        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI */
+        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET - SIFIR BOŞLUK) */
         .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
-        .bbx-table thead tr:nth-child(2) th { top: 48px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: 1px solid rgba(128,128,128,0.1) !important;}
+        .bbx-table thead tr:nth-child(2) th { top: 44px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: none !important; }
         
         .bbx-table td { 
             border-top: none !important; 
@@ -771,11 +772,11 @@ elif st.session_state.current_view == "bbx_paneli":
                         <th rowspan="2">HB Kod</th>
                         <th rowspan="2">SKU</th>
                         <th rowspan="2">Alt Grup</th>
-                        <th colspan="4" style="padding: 6px;">
+                        <th colspan="4" style="padding: 6px 0; height: 44px;">
                             <img src="{ty_l}" class="header-logo logo-light" style="height: 32px;">
                             <img src="{ty_d}" class="header-logo logo-dark" style="height: 32px;">
                         </th>
-                        <th colspan="4" class="plat-sep" style="padding: 6px;">
+                        <th colspan="4" class="plat-sep" style="padding: 6px 0; height: 44px;">
                             <img src="{hb_l}" class="header-logo logo-light" style="height: 32px;">
                             <img src="{hb_d}" class="header-logo logo-dark" style="height: 32px;">
                         </th>
