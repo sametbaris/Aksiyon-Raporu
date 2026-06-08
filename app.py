@@ -46,14 +46,17 @@ PLATFORM_LINKS = {
 @st.dialog("🔐 BBX Yönetici Girişi")
 def login_dialog():
     st.info("ℹ️ Bu alana erişim kısıtlanmıştır. Lütfen yönetici şifresini giriniz.")
-    pwd = st.text_input("Şifre:", type="password", key="modal_pwd")
-    if st.button("Giriş Yap", use_container_width=True):
-        if pwd == "mobese":
-            st.session_state.bbx_authenticated = True
-            st.session_state.current_view = "bbx_paneli"
-            st.rerun()
-        else:
-            st.error("❌ Hatalı şifre!")
+    # st.form sayesinde şifreyi yazıp 'Enter'a basmak yeterli olacak
+    with st.form("login_form"):
+        pwd = st.text_input("Şifre:", type="password", key="modal_pwd")
+        submitted = st.form_submit_button("Giriş Yap", use_container_width=True)
+        if submitted:
+            if pwd == "mobese":
+                st.session_state.bbx_authenticated = True
+                st.session_state.current_view = "bbx_paneli"
+                st.rerun()
+            else:
+                st.error("❌ Hatalı şifre!")
 
 # ================= AKILLI LOGO YÜKLEME =================
 def get_base64_logo(file_name):
@@ -184,7 +187,7 @@ st.markdown("""
     .data-pill { padding: 5px 12px; display: inline-flex; align-items: center; justify-content: center; border-radius: 20px; font-size: 13px; line-height: 1.2; transform: translateY(0); transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); backface-visibility: hidden; -webkit-font-smoothing: antialiased; will-change: transform; }
     a.data-link:hover .data-pill { transform: translateY(-3px); box-shadow: 0px 5px 12px rgba(0,0,0,0.15); cursor: pointer; }
 
-    /* THUMBNAIL GÖRSEL CSS */
+    /* THUMBNAIL GÖRSEL CSS (HEM ANA SAYFA HEM BBX İÇİN ORTAK KULLANIM) */
     .sku-wrapper { position: relative; display: inline-block; cursor: pointer; }
     .sku-thumb { visibility: hidden; position: absolute; left: 110%; top: 50%; transform: translateY(-50%) translateX(10px); opacity: 0; transition: all 0.2s ease-in-out; background-color: var(--dynamic-bg-color, #ffffff); padding: 5px; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 999999 !important; border: 1px solid rgba(128,128,128,0.2); pointer-events: none; width: 162px !important; height: 162px !important; display: flex !important; align-items: center !important; justify-content: center !important; }
     .sku-thumb img { width: 150px !important; height: 150px !important; min-width: 150px !important; min-height: 150px !important; max-width: 150px !important; object-fit: contain !important; border-radius: 8px; background: white; display: block !important; }
@@ -218,17 +221,34 @@ def get_gspread_client():
         print(f"Auth Error: {e}")
         return None
 
-# ================= BBX İÇİN DÜZELTİLMİŞ KİMLİK DOĞRULAMA =================
+# ================= BBX İÇİN VERİ ÇEKME VE GÖRSEL MAPPING =================
 def get_bbx_data_from_sheets():
     try:
         client = get_gspread_client()
         if not client:
-            st.error("Google Sheets istemcisi oluşturulamadı. Kimlik bilgilerinizi kontrol edin.")
+            st.error("Google Sheets istemcisi oluşturulamadı.")
             return []
         return client.open_by_key(SHEET_ID).worksheet("BBX").get_all_values()
     except Exception as e:
         st.error(f"Google Sheets BBX verisi çekilirken hata: {e}")
         return []
+
+@st.cache_data(ttl=600)
+def get_image_mapping():
+    """Mapping dosyasından barkod ve görsel URL eşleşmesini çeker (BBX tablosunda hover için)"""
+    img_map = {}
+    if os.path.exists(MAPPING_FILE):
+        try:
+            df = pd.read_excel(MAPPING_FILE, engine='openpyxl', dtype=str)
+            bc_col = next((c for c in df.columns if "barkod" in c.lower()), None)
+            if bc_col and "Gorsel_URL" in df.columns:
+                for _, row in df.iterrows():
+                    bc = clean_val(row[bc_col])
+                    img = str(row["Gorsel_URL"]).strip()
+                    if bc and img.startswith("http"):
+                        img_map[bc] = img
+        except: pass
+    return img_map
 
 # ================= ZİYARETÇİ TAKİP =================
 @st.cache_data(ttl=60)
@@ -685,22 +705,21 @@ elif st.session_state.current_view == "bbx_paneli":
     if not st.session_state.bbx_authenticated:
         st.warning("Lütfen ana sayfadan giriş yapınız.")
     else:
-        def get_bbx_data_from_sheets():
-            try:
-                client = get_gspread_client()
-                return client.open_by_key(SHEET_ID).worksheet("BBX").get_all_values()
-            except Exception as e:
-                st.error(f"Google Sheets'e bağlanırken hata: {e}")
-                return []
-
         raw_data = get_bbx_data_from_sheets()
+        img_map = get_image_mapping() # Görsel Hover için sözlüğü çağırıyoruz
 
         if raw_data:
             all_export_data = []
             ty_alarm_data = []
             hb_alarm_data = []
             
-            html_table = """
+            # Logoların Light ve Dark Base64 verilerini alıyoruz
+            ty_l = LOGOS.get("Trendyol", {}).get("light", "")
+            ty_d = LOGOS.get("Trendyol", {}).get("dark", "")
+            hb_l = LOGOS.get("Hepsiburada", {}).get("light", "")
+            hb_d = LOGOS.get("Hepsiburada", {}).get("dark", "")
+            
+            html_table = f"""
             <div class="bbx-table-wrapper">
             <table class="bbx-table">
                 <thead>
@@ -709,8 +728,16 @@ elif st.session_state.current_view == "bbx_paneli":
                         <th rowspan="2">HB Kod</th>
                         <th rowspan="2">SKU</th>
                         <th rowspan="2">Alt Grup</th>
-                        <th colspan="4">TRENDYOL</th>
-                        <th colspan="4">HEPSİBURADA</th>
+                        <!-- YENİ: LOGOLU BAŞLIKLAR (TRENDYOL) -->
+                        <th colspan="4" style="padding: 10px;">
+                            <img src="{ty_l}" class="header-logo logo-light" style="height: 22px;">
+                            <img src="{ty_d}" class="header-logo logo-dark" style="height: 22px;">
+                        </th>
+                        <!-- YENİ: LOGOLU BAŞLIKLAR (HEPSİBURADA) -->
+                        <th colspan="4" style="padding: 10px;">
+                            <img src="{hb_l}" class="header-logo logo-light" style="height: 22px;">
+                            <img src="{hb_d}" class="header-logo logo-dark" style="height: 22px;">
+                        </th>
                     </tr>
                     <tr>
                         <th style="width: 45px;">Durum</th>
@@ -767,8 +794,16 @@ elif st.session_state.current_view == "bbx_paneli":
                 hs1, hf1 = ps(row[10]), pf(row[11])
                 hs2, hf2 = ps(row[12]), pf(row[13])
                 hs3, hf3 = ps(row[14]), pf(row[15])
+                
+                # YENİ: SKU Hover (Thumbnail) Mantığı Eklendi
+                barkod_clean = clean_val(barkod)
+                img_url = img_map.get(barkod_clean, "")
+                if img_url:
+                    sku_cell = f"<td rowspan='2' class='p-div'><div class='sku-wrapper'><span class='bbx-sku'>{sku}</span><div class='sku-thumb'><img src='{img_url}' referrerpolicy='no-referrer'></div></div></td>"
+                else:
+                    sku_cell = f"<td rowspan='2' class='bbx-sku p-div'>{sku}</td>"
 
-                html_table += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td><td rowspan='2' class='bbx-sku p-div'>{sku}</td><td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
+                html_table += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td>{sku_cell}<td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
                 
             html_table += "</tbody></table></div>"
             
@@ -777,9 +812,19 @@ elif st.session_state.current_view == "bbx_paneli":
             with pd.ExcelWriter(b_ty, engine='openpyxl') as w: pd.DataFrame(ty_alarm_data).to_excel(w, index=False)
             with pd.ExcelWriter(b_hb, engine='openpyxl') as w: pd.DataFrame(hb_alarm_data).to_excel(w, index=False)
 
+            # FALSE TRUE hatası if else bloğuna çevrilerek giderildi
             c1, c2, c3 = st.columns([0.30, 0.35, 0.35])
-            with c1: st.download_button("📥 Tüm Tabloyu İndir", b_all.getvalue(), "Tum_BBX.xlsx", use_container_width=True)
-            with c2: st.download_button("🚨 Trendyol Alarm İndir", b_ty.getvalue(), "TY_Alarm.xlsx", use_container_width=True) if ty_alarm_data else st.success("Trendyol Kusursuz!")
-            with c3: st.download_button("🚨 Hepsiburada Alarm İndir", b_hb.getvalue(), "HB_Alarm.xlsx", use_container_width=True) if hb_alarm_data else st.success("Hepsiburada Kusursuz!")
+            with c1: 
+                st.download_button("📥 Tüm Tabloyu İndir", b_all.getvalue(), "Tum_BBX.xlsx", use_container_width=True)
+            with c2: 
+                if ty_alarm_data:
+                    st.download_button("🚨 Trendyol Alarm İndir", b_ty.getvalue(), "TY_Alarm.xlsx", use_container_width=True)
+                else:
+                    st.success("✨ Trendyol Kusursuz!")
+            with c3: 
+                if hb_alarm_data:
+                    st.download_button("🚨 Hepsiburada Alarm İndir", b_hb.getvalue(), "HB_Alarm.xlsx", use_container_width=True)
+                else:
+                    st.success("✨ Hepsiburada Kusursuz!")
 
             st.markdown(html_table.replace('\n', ''), unsafe_allow_html=True)
