@@ -707,6 +707,12 @@ elif st.session_state.current_view == "bbx_paneli":
         .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
         .bbx-table thead tr:nth-child(2) th { top: 44px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: none !important; }
         
+        /* DÜZELTME: İlk satırda Barkod, SKU gibi rowspan=2 olan hücrelere gölgeyi geri getiriyoruz */
+        .bbx-table thead tr:nth-child(1) th[rowspan="2"] { 
+            box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; 
+            border-bottom: 1px solid rgba(128,128,128,0.1) !important; 
+        }
+        
         .bbx-table td { 
             border-top: none !important; 
             border-left: none !important; 
