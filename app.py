@@ -668,15 +668,15 @@ elif st.session_state.current_view == "bbx_paneli":
     
     st.markdown("""
     <style>
-        .bbx-title { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem; font-weight: 800; margin-bottom: 0.5rem; font-family: 'Inter', sans-serif; }
-        .bbx-subtitle { color: var(--text-color); opacity: 0.7; font-size: 1.1rem; margin-bottom: 1rem; font-family: 'Inter', sans-serif; }
+        .bbx-title { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.2rem; font-weight: 800; margin-bottom: 0.1rem; font-family: 'Inter', sans-serif; }
+        .bbx-subtitle { color: var(--text-color); opacity: 0.7; font-size: 1.0rem; margin-bottom: 0.5rem; font-family: 'Inter', sans-serif; }
         
         .bbx-table-wrapper { 
             background-color: transparent; 
             border-radius: 8px; 
             padding: 0px; 
             overflow: auto; 
-            max-height: 60vh; 
+            max-height: 70vh; 
             margin-top: 5px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
         }
@@ -703,22 +703,9 @@ elif st.session_state.current_view == "bbx_paneli":
             border-right: none !important; 
         }
         
-        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET) */
-        .bbx-table thead tr:nth-child(1) th { top: 0px !important; }
-        .bbx-table thead tr:nth-child(2) th { top: 44px !important; }
-        
-        /* Satırın en altına temas eden hücrelere (rowspan=2 olanlar ve 2. satırdakiler) gölge veriyoruz */
-        .bbx-table thead tr:nth-child(1) th[rowspan="2"], 
-        .bbx-table thead tr:nth-child(2) th { 
-            box-shadow: 0 -2px 0 var(--dynamic-bg-color, #ffffff), 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; 
-            border-bottom: 1px solid rgba(128,128,128,0.1) !important; 
-        }
-        
-        /* Logolu üst başlıkların sadece alt çizgisi kalsın, gölge olmasın */
-        .bbx-table thead tr:nth-child(1) th[colspan="4"] { 
-            box-shadow: none !important; 
-            border-bottom: 1px solid rgba(128,128,128,0.1) !important; 
-        }
+        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET - SIFIR BOŞLUK) */
+        .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
+        .bbx-table thead tr:nth-child(2) th { top: 44px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: none !important; }
         
         .bbx-table td { 
             border-top: none !important; 
@@ -753,12 +740,12 @@ elif st.session_state.current_view == "bbx_paneli":
         st.markdown("<h1 class='bbx-title'>🛒 BuyBox Takibi</h1>", unsafe_allow_html=True)
         st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin.</p>", unsafe_allow_html=True)
     with col_b_btn:
-        st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
         if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
             st.session_state.current_view = "ana_sayfa"
             st.rerun()
             
-    st.markdown("---")
+    st.markdown("<hr style='margin: 5px 0 15px 0; border: none; border-top: 1px solid rgba(128,128,128,0.2);'>", unsafe_allow_html=True)
 
     if not st.session_state.bbx_authenticated:
         st.warning("Lütfen ana sayfadan giriş yapınız.")
