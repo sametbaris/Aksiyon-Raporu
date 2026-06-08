@@ -783,13 +783,13 @@ elif st.session_state.current_view == "bbx_paneli":
                     </tr>
                     <tr>
                         <th style="width: 45px;">Durum</th>
-                        <th>1. Satıcı</th>
-                        <th>2. Satıcı</th>
-                        <th>3. Satıcı</th>
+                        <th>#1</th>
+                        <th>#2</th>
+                        <th>#3</th>
                         <th class="plat-sep" style="width: 45px;">Durum</th>
-                        <th>1. Satıcı</th>
-                        <th>2. Satıcı</th>
-                        <th>3. Satıcı</th>
+                        <th>#1</th>
+                        <th>#2</th>
+                        <th>#3</th>
                     </tr>
                 </thead>
                 <tbody>
