@@ -46,7 +46,6 @@ PLATFORM_LINKS = {
 @st.dialog("🔐 BBX Yönetici Girişi")
 def login_dialog():
     st.info("ℹ️ Bu alana erişim kısıtlanmıştır. Lütfen yönetici şifresini giriniz.")
-    # st.form sayesinde şifreyi yazıp 'Enter'a basmak yeterli olacak
     with st.form("login_form"):
         pwd = st.text_input("Şifre:", type="password", key="modal_pwd")
         submitted = st.form_submit_button("Giriş Yap", use_container_width=True)
@@ -235,7 +234,6 @@ def get_bbx_data_from_sheets():
 
 @st.cache_data(ttl=600)
 def get_image_mapping():
-    """Mapping dosyasından barkod ve görsel URL eşleşmesini çeker (BBX tablosunda hover için)"""
     img_map = {}
     if os.path.exists(MAPPING_FILE):
         try:
@@ -319,7 +317,7 @@ def get_column_mapping(df):
         "Amazon": find_col("Amazon")
     }
 
-# ================= AKILLI LİNK MOTORU (JET HIZI FORMÜLLERİNİ KULLANIR) =================
+# ================= AKILLI LİNK MOTORU =================
 def build_smart_link(label, raw_id, row):
     sheet_url = str(row.get(f"{label}_URL", "")).strip()
     if sheet_url.startswith("http"): 
@@ -538,7 +536,6 @@ if st.session_state.current_view == "ana_sayfa":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
-        # POP-UP (MODAL) TETİKLEYİCİSİ
         if st.button("🔐 BBX Paneli", use_container_width=True):
             if not st.session_state.bbx_authenticated:
                 login_dialog()
@@ -672,13 +669,59 @@ elif st.session_state.current_view == "bbx_paneli":
     <style>
         .bbx-title { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.8rem; font-weight: 800; margin-bottom: 0.5rem; font-family: 'Inter', sans-serif; }
         .bbx-subtitle { color: var(--text-color); opacity: 0.7; font-size: 1.1rem; margin-bottom: 1rem; font-family: 'Inter', sans-serif; }
-        .bbx-table-wrapper { background-color: var(--background-color); border-radius: 12px; padding: 1px; overflow: auto; margin-top: 5px; border: 1px solid var(--secondary-background-color); }
-        .bbx-table { width: 100%; border-collapse: collapse; font-family: sans-serif; font-size: 13px; color: var(--text-color); border: none !important; }
-        .bbx-table th, .bbx-table td { border: 1px solid var(--secondary-background-color); padding: 10px 6px; text-align: center; vertical-align: middle; }
-        .bbx-table th { background-color: var(--secondary-background-color); font-weight: 600; text-transform: uppercase; font-size: 11px; }
+        
+        .bbx-table-wrapper { 
+            background-color: transparent; 
+            border-radius: 8px; 
+            padding: 0px; 
+            overflow: auto; 
+            max-height: 65vh; 
+            margin-top: 5px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
+        }
+        .bbx-table-wrapper::-webkit-scrollbar { width: 5px !important; height: 5px !important; }
+        .bbx-table-wrapper::-webkit-scrollbar-track { background: transparent !important; }
+        .bbx-table-wrapper::-webkit-scrollbar-thumb { background-color: rgba(128, 128, 128, 0) !important; border-radius: 10px !important; transition: background-color 0.3s ease-in-out !important; }
+        .bbx-table-wrapper:hover::-webkit-scrollbar-thumb { background-color: rgba(128, 128, 128, 0.15) !important; }
+        .bbx-table-wrapper::-webkit-scrollbar-thumb:hover { background-color: rgba(128, 128, 128, 0.20) !important; }
+        
+        .bbx-table { width: 100%; table-layout: auto; border-collapse: separate !important; border-spacing: 0 !important; font-family: 'Inter', sans-serif; font-size: 13px; color: var(--text-color); border: none !important; }
+        
+        .bbx-table thead th { 
+            position: sticky; 
+            z-index: 50 !important; 
+            padding: 12px 6px; 
+            text-align: center; 
+            color: var(--header-color); 
+            font-weight: 600; 
+            text-transform: uppercase; 
+            font-size: 11px; 
+            background-color: var(--dynamic-bg-color, #ffffff) !important; 
+            border-top: none !important; 
+            border-left: none !important; 
+            border-right: none !important; 
+        }
+        
+        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI */
+        .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
+        .bbx-table thead tr:nth-child(2) th { top: 48px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: 1px solid rgba(128,128,128,0.1) !important;}
+        
+        .bbx-table td { 
+            border-top: none !important; 
+            border-left: none !important; 
+            border-right: none !important; 
+            border-bottom: 1px solid rgba(128,128,128,0.06) !important; 
+            padding: 10px 6px; 
+            text-align: center; 
+            vertical-align: middle; 
+        }
+        
+        .plat-sep { border-left: 2px solid rgba(128,128,128,0.15) !important; }
+        
         .bbx-sku { color: #0078ff !important; font-weight: bold; font-size: 13px; } 
-        .pill-satici { background-color: var(--secondary-background-color); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 20px; padding: 4px 10px; font-weight: 600; font-size: 11px; display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .pill-satici { background-color: var(--pill-default-bg); border: 1px solid rgba(128, 128, 128, 0.2); border-radius: 20px; padding: 4px 10px; font-weight: 600; font-size: 11px; display: inline-block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .pill-fiyat { background-color: rgba(0, 184, 76, 0.1); border: 1px solid rgba(0, 184, 76, 0.3); color: #00b84c; border-radius: 20px; padding: 4px 10px; font-weight: bold; font-size: 12px; display: inline-block; }
+        
         @keyframes blink { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.1); } 100% { opacity: 1; transform: scale(1); } }
         .status-dot { height: 12px; width: 12px; border-radius: 50%; display: inline-block; animation: blink 1.5s infinite; }
         .dot-green { background-color: #00e676; box-shadow: 0 0 10px #00e676; }
@@ -686,14 +729,15 @@ elif st.session_state.current_view == "bbx_paneli":
         .dot-red { background-color: #ff1744; box-shadow: 0 0 10px #ff1744; }
         .n-b-b { border-bottom: none !important; padding-bottom: 2px !important; }
         .n-b-t { border-top: none !important; padding-top: 2px !important; }
-        .p-div { border-bottom: 2px solid var(--secondary-background-color) !important; }
+        .p-div { border-bottom: 1px solid rgba(128,128,128,0.06) !important; }
+        .bbx-table tbody tr:last-child td { border-bottom: none !important; }
     </style>
     """, unsafe_allow_html=True)
     
     col_b_title, col_b_btn = st.columns([4, 1])
     with col_b_title:
-        st.markdown("<h1 class='bbx-title'>🛒 BuyBox Takip</h1>", unsafe_allow_html=True)
-        st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin.</p>", unsafe_allow_html=True)
+        st.markdown("<h1 class='bbx-title'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
+        st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.</p>", unsafe_allow_html=True)
     with col_b_btn:
         st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
         if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
@@ -706,14 +750,13 @@ elif st.session_state.current_view == "bbx_paneli":
         st.warning("Lütfen ana sayfadan giriş yapınız.")
     else:
         raw_data = get_bbx_data_from_sheets()
-        img_map = get_image_mapping() # Görsel Hover için sözlüğü çağırıyoruz
+        img_map = get_image_mapping()
 
         if raw_data:
             all_export_data = []
             ty_alarm_data = []
             hb_alarm_data = []
             
-            # Logoların Light ve Dark Base64 verilerini alıyoruz
             ty_l = LOGOS.get("Trendyol", {}).get("light", "")
             ty_d = LOGOS.get("Trendyol", {}).get("dark", "")
             hb_l = LOGOS.get("Hepsiburada", {}).get("light", "")
@@ -728,15 +771,13 @@ elif st.session_state.current_view == "bbx_paneli":
                         <th rowspan="2">HB Kod</th>
                         <th rowspan="2">SKU</th>
                         <th rowspan="2">Alt Grup</th>
-                        <!-- YENİ: LOGOLU BAŞLIKLAR (TRENDYOL) -->
-                        <th colspan="4" style="padding: 10px;">
-                            <img src="{ty_l}" class="header-logo logo-light" style="height: 22px;">
-                            <img src="{ty_d}" class="header-logo logo-dark" style="height: 22px;">
+                        <th colspan="4" style="padding: 6px;">
+                            <img src="{ty_l}" class="header-logo logo-light" style="height: 32px;">
+                            <img src="{ty_d}" class="header-logo logo-dark" style="height: 32px;">
                         </th>
-                        <!-- YENİ: LOGOLU BAŞLIKLAR (HEPSİBURADA) -->
-                        <th colspan="4" style="padding: 10px;">
-                            <img src="{hb_l}" class="header-logo logo-light" style="height: 22px;">
-                            <img src="{hb_d}" class="header-logo logo-dark" style="height: 22px;">
+                        <th colspan="4" class="plat-sep" style="padding: 6px;">
+                            <img src="{hb_l}" class="header-logo logo-light" style="height: 32px;">
+                            <img src="{hb_d}" class="header-logo logo-dark" style="height: 32px;">
                         </th>
                     </tr>
                     <tr>
@@ -744,7 +785,7 @@ elif st.session_state.current_view == "bbx_paneli":
                         <th>1. Satıcı</th>
                         <th>2. Satıcı</th>
                         <th>3. Satıcı</th>
-                        <th style="width: 45px;">Durum</th>
+                        <th class="plat-sep" style="width: 45px;">Durum</th>
                         <th>1. Satıcı</th>
                         <th>2. Satıcı</th>
                         <th>3. Satıcı</th>
@@ -795,7 +836,6 @@ elif st.session_state.current_view == "bbx_paneli":
                 hs2, hf2 = ps(row[12]), pf(row[13])
                 hs3, hf3 = ps(row[14]), pf(row[15])
                 
-                # YENİ: SKU Hover (Thumbnail) Mantığı Eklendi
                 barkod_clean = clean_val(barkod)
                 img_url = img_map.get(barkod_clean, "")
                 if img_url:
@@ -803,7 +843,7 @@ elif st.session_state.current_view == "bbx_paneli":
                 else:
                     sku_cell = f"<td rowspan='2' class='bbx-sku p-div'>{sku}</td>"
 
-                html_table += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td>{sku_cell}<td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
+                html_table += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td>{sku_cell}<td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div plat-sep'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
                 
             html_table += "</tbody></table></div>"
             
@@ -812,7 +852,6 @@ elif st.session_state.current_view == "bbx_paneli":
             with pd.ExcelWriter(b_ty, engine='openpyxl') as w: pd.DataFrame(ty_alarm_data).to_excel(w, index=False)
             with pd.ExcelWriter(b_hb, engine='openpyxl') as w: pd.DataFrame(hb_alarm_data).to_excel(w, index=False)
 
-            # FALSE TRUE hatası if else bloğuna çevrilerek giderildi
             c1, c2, c3 = st.columns([0.30, 0.35, 0.35])
             with c1: 
                 st.download_button("📥 Tüm Tabloyu İndir", b_all.getvalue(), "Tum_BBX.xlsx", use_container_width=True)
