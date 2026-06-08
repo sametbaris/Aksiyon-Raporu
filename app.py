@@ -21,7 +21,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# ================= SESSION STATE (YENİ EKLENDİ) =================
+# ================= SESSION STATE =================
 if "current_view" not in st.session_state:
     st.session_state.current_view = "ana_sayfa"
 if "bbx_authenticated" not in st.session_state:
@@ -41,6 +41,19 @@ PLATFORM_LINKS = {
     "Hepsiburada": "https://www.hepsiburada.com/magaza/hepsiburada?markalar=braun-revlon&kategori=60001547&tab=allproducts",
     "Trendyol": "https://www.trendyol.com/sr?wb=633%2C888&os=1&mid=968"
 }
+
+# ================= ŞİFRE POP-UP (MODAL) FONKSİYONU =================
+@st.dialog("🔐 BBX Yönetici Girişi")
+def login_dialog():
+    st.info("ℹ️ Bu alana erişim kısıtlanmıştır. Lütfen yönetici şifresini giriniz.")
+    pwd = st.text_input("Şifre:", type="password", key="modal_pwd")
+    if st.button("Giriş Yap", use_container_width=True):
+        if pwd == "mobese":
+            st.session_state.bbx_authenticated = True
+            st.session_state.current_view = "bbx_paneli"
+            st.rerun()
+        else:
+            st.error("❌ Hatalı şifre!")
 
 # ================= AKILLI LOGO YÜKLEME =================
 def get_base64_logo(file_name):
@@ -208,13 +221,10 @@ def get_gspread_client():
 # ================= BBX İÇİN DÜZELTİLMİŞ KİMLİK DOĞRULAMA =================
 def get_bbx_data_from_sheets():
     try:
-        # HATA BURADAYDI! Artık senin kendi fonksiyonunu ve ID'ni kullanıyor
         client = get_gspread_client()
         if not client:
             st.error("Google Sheets istemcisi oluşturulamadı. Kimlik bilgilerinizi kontrol edin.")
             return []
-        
-        # Dosya ID'si üzerinden gitmek ismiyle gitmekten çok daha güvenlidir
         return client.open_by_key(SHEET_ID).worksheet("BBX").get_all_values()
     except Exception as e:
         st.error(f"Google Sheets BBX verisi çekilirken hata: {e}")
@@ -291,12 +301,10 @@ def get_column_mapping(df):
 
 # ================= AKILLI LİNK MOTORU (JET HIZI FORMÜLLERİNİ KULLANIR) =================
 def build_smart_link(label, raw_id, row):
-    # 📌 1. ADIM: EĞER GOOGLE SHEETS FORMÜLÜNDEN DİREKT LİNK YAKALANDIYSA ONU VER (Kusursuz)
     sheet_url = str(row.get(f"{label}_URL", "")).strip()
     if sheet_url.startswith("http"): 
         return sheet_url
     elif sheet_url.startswith("/"):
-        # Local bot bazen sadece uzantı yazabiliyor, ona domain ekliyoruz
         if label == "Aksiyon": return f"https://www.akakce.com{sheet_url}"
         if label == "Braun Shop": return f"https://www.braunshop.com.tr{sheet_url}"
         if label == "Media Markt": return f"https://www.mediamarkt.com.tr{sheet_url}"
@@ -305,7 +313,6 @@ def build_smart_link(label, raw_id, row):
         if label == "Trendyol": return f"https://www.trendyol.com{sheet_url}"
         if label == "Hepsiburada": return f"https://www.hepsiburada.com{sheet_url}"
         
-    # 📌 2. ADIM: YEDEK (FORMÜL YOKSA ESKİ USÜL)
     val = clean_val(raw_id)
     barcode = clean_val(row.get("Barkod_Int", ""))
     
@@ -352,7 +359,6 @@ def load_and_merge_data():
         data = worksheet.get_all_values()
         if not data: return None, update_text
         
-        # 📌 MUCİZE BURADA: GOOGLE SHEETS FORMÜLLERİNİ OKUYORUZ
         try:
             data_formulas = worksheet.get_all_values(value_render_option='FORMULA')
         except:
@@ -361,32 +367,25 @@ def load_and_merge_data():
         df_fiyat = pd.DataFrame(data[1:], columns=[str(c).strip() for c in data[0]])
         df_formulas = pd.DataFrame(data_formulas[1:], columns=[str(c).strip() for c in data_formulas[0]])
         
-        # Formülden Saf LİNK (URL) Ayıklama Aracı
         def extract_url(val):
             if isinstance(val, str) and 'HYPERLINK' in val.upper():
                 m = re.search(r'HYPERLINK\(\s*["\']([^"\']+)["\']', val, re.IGNORECASE)
                 if m: return m.group(1)
             return ""
             
-        # Akakçe (Aksiyon) linkleri lokal bot tarafından 'Braun Ürün Kodu' sütununa basılıyor, oradan okuyalım
         br_col = next((c for c in df_formulas.columns if "braun" in c.lower() and "kodu" in c.lower()), None)
         if br_col: df_fiyat["Aksiyon_URL"] = df_formulas[br_col].apply(extract_url)
         else: df_fiyat["Aksiyon_URL"] = ""
         
-        # Diğer platform linkleri kendi isimlerindeki sütunlara basılıyor, onları da çekelim
         for plat in ["Braun Shop", "Media Markt", "Teknosa", "Vatan", "Trendyol", "Hepsiburada", "Amazon"]:
             col = next((c for c in df_formulas.columns if plat.lower().replace(" ", "") in c.lower().replace(" ", "") or (plat=="Hepsiburada" and "hepsi" in c.lower())), None)
             if col: df_fiyat[f"{plat}_URL"] = df_formulas[col].apply(extract_url)
             else: df_fiyat[f"{plat}_URL"] = ""
 
-        # Barkod eşleme
         bc_col = next((c for c in df_fiyat.columns if "barkod" in c.lower()), None)
-        if bc_col: 
-            df_fiyat["Barkod_Int"] = df_fiyat[bc_col].apply(clean_val)
-        else:
-            df_fiyat["Barkod_Int"] = ""
+        if bc_col: df_fiyat["Barkod_Int"] = df_fiyat[bc_col].apply(clean_val)
+        else: df_fiyat["Barkod_Int"] = ""
         
-        # EXCEL MAPPING (Gorsel ve Marka için)
         if os.path.exists(MAPPING_FILE):
             df_map = pd.read_excel(MAPPING_FILE, engine='openpyxl', dtype=str)
             df_map.columns = [c.strip() for c in df_map.columns]
@@ -416,7 +415,7 @@ def display_styled_table(df, mapping):
     html = '<div class="table-container"><table class="custom-table"><thead><tr>'
     
     for label, real in mapping.items():
-        if label == "Marka": continue # Markayı tabloda gizle
+        if label == "Marka": continue 
         if real:
             count_html = ""
             if label in pazaryerleri:
@@ -439,7 +438,7 @@ def display_styled_table(df, mapping):
     for _, row in df.iterrows():
         html += '<tr>'
         for label, real in mapping.items():
-            if not real or label == "Marka": continue # Markayı gizle
+            if not real or label == "Marka": continue 
             
             val = str(row[real]); d_val = "" if val.lower() in ["nan", "none", ""] else val; style = ""
             bs_col_name = mapping.get("Braun Shop")
@@ -474,14 +473,14 @@ def display_styled_table(df, mapping):
 
 # ================= SESSION STATE BAŞLATMA (FİLTRELER İÇİN) =================
 if "search_val" not in st.session_state: st.session_state.search_val = ""
-if "marka_val" not in st.session_state: st.session_state.marka_val = [] # Eklendi
+if "marka_val" not in st.session_state: st.session_state.marka_val = [] 
 if "grup_val" not in st.session_state: st.session_state.grup_val = []
 if "plat_val" not in st.session_state: st.session_state.plat_val = None
 if "stat_val" not in st.session_state: st.session_state.stat_val = None
 
 def reset_filters():
     st.session_state.search_val = ""
-    st.session_state.marka_val = [] # Eklendi
+    st.session_state.marka_val = [] 
     st.session_state.grup_val = []
     st.session_state.plat_val = None
     st.session_state.stat_val = None
@@ -519,9 +518,13 @@ if st.session_state.current_view == "ana_sayfa":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
+        # POP-UP (MODAL) TETİKLEYİCİSİ
         if st.button("🔐 BBX Paneli", use_container_width=True):
-            st.session_state.current_view = "bbx_paneli"
-            st.rerun()
+            if not st.session_state.bbx_authenticated:
+                login_dialog()
+            else:
+                st.session_state.current_view = "bbx_paneli"
+                st.rerun()
 
     if df_data is not None:
         mapping = get_column_mapping(df_data)
@@ -536,7 +539,6 @@ if st.session_state.current_view == "ana_sayfa":
         else: 
             gruplar = []
             
-        # ÖZEL MARKA SIRALAMASI
         if marka_col and marka_col in df_data.columns:
             markalar_raw = []
             for x in df_data[marka_col].dropna():
@@ -638,7 +640,6 @@ if st.session_state.current_view == "ana_sayfa":
 
         display_styled_table(df_data, mapping)
 
-    # ================= OTOMATİK SESSİZ RERUN TETİKLEYİCİ =================
     st_autorefresh(interval=180000, limit=None, key="data_refresher")
 
 
@@ -682,17 +683,16 @@ elif st.session_state.current_view == "bbx_paneli":
     st.markdown("---")
 
     if not st.session_state.bbx_authenticated:
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.info("ℹ️ Bu alana erişim kısıtlanmıştır. Lütfen yönetici şifresini giriniz.")
-            pwd = st.text_input("Giriş Şifresi:", type="password")
-            if pwd == "mobese":
-                st.session_state.bbx_authenticated = True
-                st.success("✅ Şifre doğru! Sisteme giriş yapılıyor...")
-                st.rerun()
-            elif pwd:
-                st.error("❌ Hatalı şifre!")
+        st.warning("Lütfen ana sayfadan giriş yapınız.")
     else:
+        def get_bbx_data_from_sheets():
+            try:
+                client = get_gspread_client()
+                return client.open_by_key(SHEET_ID).worksheet("BBX").get_all_values()
+            except Exception as e:
+                st.error(f"Google Sheets'e bağlanırken hata: {e}")
+                return []
+
         raw_data = get_bbx_data_from_sheets()
 
         if raw_data:
