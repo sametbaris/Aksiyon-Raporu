@@ -753,7 +753,7 @@ elif st.session_state.current_view == "bbx_paneli":
         st.markdown("<h1 class='bbx-title'>🛒 BuyBox Takibi</h1>", unsafe_allow_html=True)
         st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin.</p>", unsafe_allow_html=True)
     with col_b_btn:
-        st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: 5px;'></div>", unsafe_allow_html=True)
         if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
             st.session_state.current_view = "ana_sayfa"
             st.rerun()
