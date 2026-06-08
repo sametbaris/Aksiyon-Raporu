@@ -692,7 +692,7 @@ elif st.session_state.current_view == "bbx_paneli":
     
     col_b_title, col_b_btn = st.columns([4, 1])
     with col_b_title:
-        st.markdown("<h1 class='bbx-title'>🛒 BBX Fiyat & Satıcı Analizi</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='bbx-title'>🛒 BuyBox Takip</h1>", unsafe_allow_html=True)
         st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin, müdahale gereken ürünleri alarm butonlarıyla anında dışa aktarın.</p>", unsafe_allow_html=True)
     with col_b_btn:
         st.markdown("<div style='margin-top: 20px;'></div>", unsafe_allow_html=True)
