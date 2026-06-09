@@ -676,7 +676,7 @@ elif st.session_state.current_view == "bbx_paneli":
             border-radius: 8px; 
             padding: 0px; 
             overflow: auto; 
-            max-height: 65vh; 
+            max-height: 70vh; 
             margin-top: 5px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
         }
@@ -741,12 +741,27 @@ elif st.session_state.current_view == "bbx_paneli":
     </style>
     """, unsafe_allow_html=True)
     
-    col_b_title, col_b_btn = st.columns([4, 1])
+    raw_data = []
+    bbx_update_text = ""
+    if st.session_state.bbx_authenticated:
+        raw_data = get_bbx_data_from_sheets()
+        # raw_data'da 2. satır (index 1) ve 17. sütun (index 16) var mı diye kontrol edip Q2'yi çekiyoruz
+        if len(raw_data) > 1 and len(raw_data[1]) >= 17:
+            bbx_update_text = str(raw_data[1][16]).strip()
+            
+    col_b_title, col_b_btn = st.columns([3, 1])
     with col_b_title:
         st.markdown("<h1 class='bbx-title'>🛒 BuyBox Takibi</h1>", unsafe_allow_html=True)
         st.markdown("<p class='bbx-subtitle'>Trendyol ve Hepsiburada Buybox durumunuzu takip edin.</p>", unsafe_allow_html=True)
     with col_b_btn:
-        st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
+        if bbx_update_text:
+            st.markdown(f'''
+                <div class="update-badge">{bbx_update_text}</div>
+                <div style="clear: both; height: 10px;"></div>
+            ''', unsafe_allow_html=True)
+        else:
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
+            
         if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
             st.session_state.current_view = "ana_sayfa"
             st.rerun()
@@ -756,7 +771,6 @@ elif st.session_state.current_view == "bbx_paneli":
     if not st.session_state.bbx_authenticated:
         st.warning("Lütfen ana sayfadan giriş yapınız.")
     else:
-        raw_data = get_bbx_data_from_sheets()
         img_map = get_image_mapping()
 
         if raw_data:
