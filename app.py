@@ -511,7 +511,6 @@ def reset_filters():
 if st.session_state.current_view == "ana_sayfa":
 
     # ================= MAIN =================
-    # ================= MAIN =================
     col_title, col_update = st.columns([3, 1])
 
     with col_title:
@@ -537,7 +536,6 @@ if st.session_state.current_view == "ana_sayfa":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
-        # POP-UP (MODAL) TETİKLEYİCİSİ - Butonu daraltıp sağa yaslamak için görünmez bir alt sütun açıyoruz
         _, btn_col = st.columns([1, 1.4]) 
         with btn_col:
             if st.button("🔐 BBX Paneli", use_container_width=True):
@@ -679,7 +677,7 @@ elif st.session_state.current_view == "bbx_paneli":
             border-radius: 8px; 
             padding: 0px; 
             overflow: auto; 
-            max-height: 65vh; 
+            max-height: 70vh; 
             margin-top: 5px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
         }
@@ -748,7 +746,6 @@ elif st.session_state.current_view == "bbx_paneli":
     bbx_update_text = ""
     if st.session_state.bbx_authenticated:
         raw_data = get_bbx_data_from_sheets()
-        # raw_data'da 2. satır (index 1) ve 17. sütun (index 16) var mı diye kontrol edip Q2'yi çekiyoruz
         if len(raw_data) > 1 and len(raw_data[1]) >= 17:
             bbx_update_text = str(raw_data[1][16]).strip()
             
@@ -765,9 +762,11 @@ elif st.session_state.current_view == "bbx_paneli":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
-        if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
-            st.session_state.current_view = "ana_sayfa"
-            st.rerun()
+        _, btn_col = st.columns([1, 1.4]) 
+        with btn_col:
+            if st.button("🔙 Ana Sayfaya Dön", use_container_width=True):
+                st.session_state.current_view = "ana_sayfa"
+                st.rerun()
             
     st.markdown("<hr style='margin: 5px 0 15px 0; border: none; border-top: 1px solid rgba(128,128,128,0.2);'>", unsafe_allow_html=True)
 
@@ -777,16 +776,32 @@ elif st.session_state.current_view == "bbx_paneli":
         img_map = get_image_mapping()
 
         if raw_data:
-            all_export_data = []
-            ty_alarm_data = []
-            hb_alarm_data = []
+            # === 1. AKSİYON RAPORUNDAN RETAIL FİYATLARI ÇEK ===
+            res_aks = load_and_merge_data()
+            df_aks = res_aks[0] if res_aks else None
+            ty_retail_map = {}
+            hb_retail_map = {}
             
-            ty_l = LOGOS.get("Trendyol", {}).get("light", "")
-            ty_d = LOGOS.get("Trendyol", {}).get("dark", "")
-            hb_l = LOGOS.get("Hepsiburada", {}).get("light", "")
-            hb_d = LOGOS.get("Hepsiburada", {}).get("dark", "")
+            if df_aks is not None:
+                mapping_aks = get_column_mapping(df_aks)
+                ty_col = mapping_aks.get("Trendyol")
+                hb_col = mapping_aks.get("Hepsiburada")
+                
+                if "Barkod_Int" in df_aks.columns:
+                    for _, r in df_aks.iterrows():
+                        b_val = clean_val(str(r["Barkod_Int"]))
+                        if b_val:
+                            if ty_col and ty_col in df_aks.columns:
+                                v = str(r[ty_col]).strip()
+                                ty_retail_map[b_val] = v if v.lower() not in ["nan", "none", ""] else "-"
+                            if hb_col and hb_col in df_aks.columns:
+                                v = str(r[hb_col]).strip()
+                                hb_retail_map[b_val] = v if v.lower() not in ["nan", "none", ""] else "-"
+
+            parsed_data = []
+            alt_gruplar = set()
             
-            tbody_html = ""
+            # === 2. BBX VERİLERİNİ AYIKLA ===
             for row in raw_data:
                 while len(row) < 16: row.append("")
                 barkod, sku = str(row[0]).strip(), str(row[2]).strip()
@@ -795,6 +810,9 @@ elif st.session_state.current_view == "bbx_paneli":
                     
                 hb_kod, alt_grup = str(row[1]).strip() if row[1] else "-", str(row[3]).strip() if row[3] else "-"
                 barkod, sku = barkod if barkod else "-", sku if sku else "-"
+                
+                if alt_grup != "-":
+                    alt_gruplar.add(alt_grup)
 
                 t1, t2, t3 = str(row[4]).strip().lower(), str(row[6]).strip().lower(), str(row[8]).strip().lower()
                 h1, h2, h3 = str(row[10]).strip().lower(), str(row[12]).strip().lower(), str(row[14]).strip().lower()
@@ -811,36 +829,87 @@ elif st.session_state.current_view == "bbx_paneli":
                 elif is_hb(h2) or is_hb(h3): hb_dot, hb_s_txt = "dot-yellow", "Buybox 2. veya 3."
                 else: hb_dot, hb_s_txt = "dot-red", "Buybox Kaybedildi"
 
-                all_export_data.append({"Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup, "TY Durum": ty_s_txt, "TY S1": str(row[4]), "TY F1": str(row[5]), "TY S2": str(row[6]), "TY F2": str(row[7]), "TY S3": str(row[8]), "TY F3": str(row[9]), "HB Durum": hb_s_txt, "HB S1": str(row[10]), "HB F1": str(row[11]), "HB S2": str(row[12]), "HB F2": str(row[13]), "HB S3": str(row[14]), "HB F3": str(row[15])})
+                barkod_clean = clean_val(barkod)
+                ty_ret = ty_retail_map.get(barkod_clean, "-")
+                hb_ret = hb_retail_map.get(barkod_clean, "-")
                 
-                if ty_dot in ["dot-yellow", "dot-red"]:
-                    ty_alarm_data.append({"Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup, "Alarm": ty_s_txt, "S1": str(row[4]), "F1": str(row[5]), "S2": str(row[6]), "F2": str(row[7]), "S3": str(row[8]), "F3": str(row[9])})
-
-                if hb_dot in ["dot-yellow", "dot-red"]:
-                    hb_alarm_data.append({"Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup, "Alarm": hb_s_txt, "S1": str(row[10]), "F1": str(row[11]), "S2": str(row[12]), "F2": str(row[13]), "S3": str(row[14]), "F3": str(row[15])})
-
+                # Export sözlüğünü hazırla (Trendyol Retail ve Hepsiburada Retail eklendi)
+                export_dict = {
+                    "Barkod": barkod, "HB Kod": hb_kod, "SKU": sku, "Alt Grup": alt_grup,
+                    "Trendyol Retail": ty_ret, "Hepsiburada Retail": hb_ret,
+                    "TY Durum": ty_s_txt, "TY S1": str(row[4]), "TY F1": str(row[5]), "TY S2": str(row[6]), "TY F2": str(row[7]), "TY S3": str(row[8]), "TY F3": str(row[9]), 
+                    "HB Durum": hb_s_txt, "HB S1": str(row[10]), "HB F1": str(row[11]), "HB S2": str(row[12]), "HB F2": str(row[13]), "HB S3": str(row[14]), "HB F3": str(row[15])
+                }
+                
                 def ps(v): return f"<span class='pill-satici'>{v}</span>" if v and v != "-" and v.lower() != "nan" else "-"
                 def pf(f): return f"<span class='pill-fiyat'>{f} TL</span>" if f and f != "-" and f.lower() != "nan" and "TL" not in f else (f"<span class='pill-fiyat'>{f}</span>" if f and f != "-" and f.lower() != "nan" else "-")
-
-                ts1, tf1 = ps(row[4]), pf(row[5])
-                ts2, tf2 = ps(row[6]), pf(row[7])
-                ts3, tf3 = ps(row[8]), pf(row[9])
-                hs1, hf1 = ps(row[10]), pf(row[11])
-                hs2, hf2 = ps(row[12]), pf(row[13])
-                hs3, hf3 = ps(row[14]), pf(row[15])
                 
-                barkod_clean = clean_val(barkod)
+                parsed_data.append({
+                    "Barkod": barkod, "SKU": sku, "HB Kod": hb_kod, "Alt Grup": alt_grup,
+                    "_is_ty_alarm": ty_dot in ["dot-yellow", "dot-red"],
+                    "_is_hb_alarm": hb_dot in ["dot-yellow", "dot-red"],
+                    "_ty_dot": ty_dot, "_hb_dot": hb_dot,
+                    "_ts1": ps(row[4]), "_tf1": pf(row[5]), "_ts2": ps(row[6]), "_tf2": pf(row[7]), "_ts3": ps(row[8]), "_tf3": pf(row[9]),
+                    "_hs1": ps(row[10]), "_hf1": pf(row[11]), "_hs2": ps(row[12]), "_hf2": pf(row[13]), "_hs3": ps(row[14]), "_hf3": pf(row[15]),
+                    "_export_dict": export_dict
+                })
+                
+            # === 3. FİLTRELEME ARAYÜZÜ ===
+            col_search, col_grup, col_stat, col_btn_group = st.columns([1.5, 1.5, 1.5, 1.5])
+            with col_search: 
+                search_bbx = st.text_input("🔍 Ürün Ara...", key="search_bbx")
+            with col_grup: 
+                grup_bbx = st.multiselect("📂 Alt Grup", sorted(list(alt_gruplar)), placeholder="Tümü", key="grup_bbx")
+            with col_stat: 
+                alarm_filter = st.selectbox("🚨 Alarm Durumu", ["Tümü", "🔴 Trendyol Alarmları", "🔴 Hepsiburada Alarmları"], index=0, key="stat_bbx")
+                
+            # === 4. FİLTRELERİ UYGULA ===
+            filtered_data = []
+            for d in parsed_data:
+                if search_bbx:
+                    search_str = f"{d['Barkod']} {d['SKU']} {d['HB Kod']}".lower()
+                    if search_bbx.lower() not in search_str:
+                        continue
+                if grup_bbx and d['Alt Grup'] not in grup_bbx:
+                    continue
+                if alarm_filter == "🔴 Trendyol Alarmları" and not d['_is_ty_alarm']:
+                    continue
+                if alarm_filter == "🔴 Hepsiburada Alarmları" and not d['_is_hb_alarm']:
+                    continue
+                    
+                filtered_data.append(d)
+                
+            # === 5. EXCEL İNDİRME BUTONU ===
+            with col_btn_group:
+                st.markdown("<div style='margin-top: 23px;'></div>", unsafe_allow_html=True)
+                if filtered_data:
+                    b_io = io.BytesIO()
+                    with pd.ExcelWriter(b_io, engine='openpyxl') as w:
+                        pd.DataFrame([d["_export_dict"] for d in filtered_data]).to_excel(w, index=False)
+                    st.download_button("📥 Ekrandaki Tabloyu İndir", b_io.getvalue(), "Buybox_Filtreli_Rapor.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
+                else:
+                    st.button("📥 Tablo Boş", disabled=True, use_container_width=True)
+
+            # === 6. HTML TABLO RENDER ===
+            ty_l = LOGOS.get("Trendyol", {}).get("light", "")
+            ty_d = LOGOS.get("Trendyol", {}).get("dark", "")
+            hb_l = LOGOS.get("Hepsiburada", {}).get("light", "")
+            hb_d = LOGOS.get("Hepsiburada", {}).get("dark", "")
+            
+            tbody_html = ""
+            for d in filtered_data:
+                barkod_clean = clean_val(d["Barkod"])
                 img_url = img_map.get(barkod_clean, "")
                 if img_url:
-                    sku_cell = f"<td rowspan='2' class='p-div'><div class='sku-wrapper'><span class='bbx-sku'>{sku}</span><div class='sku-thumb'><img src='{img_url}' referrerpolicy='no-referrer'></div></div></td>"
+                    sku_cell = f"<td rowspan='2' class='p-div'><div class='sku-wrapper'><span class='bbx-sku'>{d['SKU']}</span><div class='sku-thumb'><img src='{img_url}' referrerpolicy='no-referrer'></div></div></td>"
                 else:
-                    sku_cell = f"<td rowspan='2' class='bbx-sku p-div'>{sku}</td>"
+                    sku_cell = f"<td rowspan='2' class='bbx-sku p-div'>{d['SKU']}</td>"
 
-                tbody_html += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td>{sku_cell}<td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div plat-sep'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
-            
-            # Ana başlıkta görünecek sayıları belirliyoruz
-            ty_alarm_count = len(ty_alarm_data)
-            hb_alarm_count = len(hb_alarm_data)
+                tbody_html += f"<tr><td rowspan='2' class='p-div'>{d['Barkod']}</td><td rowspan='2' class='p-div'>{d['HB Kod']}</td>{sku_cell}<td rowspan='2' class='p-div'>{d['Alt Grup']}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_ty_dot']}'></div></td><td class='n-b-b'>{d['_ts1']}</td><td class='n-b-b'>{d['_ts2']}</td><td class='n-b-b'>{d['_ts3']}</td><td rowspan='2' class='p-div plat-sep'><div class='status-dot {d['_hb_dot']}'></div></td><td class='n-b-b'>{d['_hs1']}</td><td class='n-b-b'>{d['_hs2']}</td><td class='n-b-b'>{d['_hs3']}</td></tr><tr><td class='n-b-t p-div'>{d['_tf1']}</td><td class='n-b-t p-div'>{d['_tf2']}</td><td class='n-b-t p-div'>{d['_tf3']}</td><td class='n-b-t p-div'>{d['_hf1']}</td><td class='n-b-t p-div'>{d['_hf2']}</td><td class='n-b-t p-div'>{d['_hf3']}</td></tr>"
+
+            # Rozetler
+            ty_alarm_count = sum(1 for d in filtered_data if d['_is_ty_alarm'])
+            hb_alarm_count = sum(1 for d in filtered_data if d['_is_hb_alarm'])
             
             ty_badge = f"<div style='font-size: 10px; color: #ff1744; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>🚨 {ty_alarm_count} Alarm</div>" if ty_alarm_count > 0 else f"<div style='font-size: 10px; color: #00b84c; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>✨ Kusursuz</div>"
             hb_badge = f"<div style='font-size: 10px; color: #ff1744; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>🚨 {hb_alarm_count} Alarm</div>" if hb_alarm_count > 0 else f"<div style='font-size: 10px; color: #00b84c; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>✨ Kusursuz</div>"
@@ -879,23 +948,4 @@ elif st.session_state.current_view == "bbx_paneli":
                 <tbody>
             """ + tbody_html + "</tbody></table></div>"
             
-            b_all, b_ty, b_hb = io.BytesIO(), io.BytesIO(), io.BytesIO()
-            with pd.ExcelWriter(b_all, engine='openpyxl') as w: pd.DataFrame(all_export_data).to_excel(w, index=False)
-            with pd.ExcelWriter(b_ty, engine='openpyxl') as w: pd.DataFrame(ty_alarm_data).to_excel(w, index=False)
-            with pd.ExcelWriter(b_hb, engine='openpyxl') as w: pd.DataFrame(hb_alarm_data).to_excel(w, index=False)
-
-            c1, c2, c3 = st.columns([0.30, 0.35, 0.35])
-            with c1: 
-                st.download_button("📥 Tüm Tabloyu İndir", b_all.getvalue(), "Tum_BBX.xlsx", use_container_width=True)
-            with c2: 
-                if ty_alarm_data:
-                    st.download_button("🚨 Trendyol Alarm İndir", b_ty.getvalue(), "TY_Alarm.xlsx", use_container_width=True)
-                else:
-                    st.success("✨ Trendyol Kusursuz!")
-            with c3: 
-                if hb_alarm_data:
-                    st.download_button("🚨 Hepsiburada Alarm İndir", b_hb.getvalue(), "HB_Alarm.xlsx", use_container_width=True)
-                else:
-                    st.success("✨ Hepsiburada Kusursuz!")
-
             st.markdown(html_table.replace('\n', ''), unsafe_allow_html=True)
