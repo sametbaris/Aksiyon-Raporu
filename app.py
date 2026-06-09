@@ -981,11 +981,11 @@ elif st.session_state.current_view == "bbx_paneli":
                 hb_ret_ui = f"{d['HB Ret']} TL" if d['HB Ret'] != "-" else "-"
                 
                 ty_td_class = "p-div"
-                ty_cols1 = f"""<td rowspan='2' class='{ty_td_class}' style='font-weight:600; color:var(--text-color); font-size: 11.5px;'>{ty_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_ty_dot']}'></div></td><td class='n-b-b'>{d['_ts1']}</td><td class='n-b-b'>{d['_ts2']}</td><td class='n-b-b'>{d['_ts3']}</td>""" if show_ty else ""
+                ty_cols1 = f"""<td rowspan='2' class='{ty_td_class}' style='font-weight:600; color:var(--text-color); font-size: 9px;'>{ty_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_ty_dot']}'></div></td><td class='n-b-b'>{d['_ts1']}</td><td class='n-b-b'>{d['_ts2']}</td><td class='n-b-b'>{d['_ts3']}</td>""" if show_ty else ""
                 ty_cols2 = f"""<td class='n-b-t p-div'>{d['_tf1']}</td><td class='n-b-t p-div'>{d['_tf2']}</td><td class='n-b-t p-div'>{d['_tf3']}</td>""" if show_ty else ""
                 
                 hb_td_class = "p-div plat-sep" if show_ty and show_hb else "p-div"
-                hb_cols1 = f"""<td rowspan='2' class='{hb_td_class}' style='font-weight:600; color:var(--text-color); font-size: 11.5px;'>{hb_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_hb_dot']}'></div></td><td class='n-b-b'>{d['_hs1']}</td><td class='n-b-b'>{d['_hs2']}</td><td class='n-b-b'>{d['_hs3']}</td>""" if show_hb else ""
+                hb_cols1 = f"""<td rowspan='2' class='{hb_td_class}' style='font-weight:600; color:var(--text-color); font-size: 9px;'>{hb_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_hb_dot']}'></div></td><td class='n-b-b'>{d['_hs1']}</td><td class='n-b-b'>{d['_hs2']}</td><td class='n-b-b'>{d['_hs3']}</td>""" if show_hb else ""
                 hb_cols2 = f"""<td class='n-b-t p-div'>{d['_hf1']}</td><td class='n-b-t p-div'>{d['_hf2']}</td><td class='n-b-t p-div'>{d['_hf3']}</td>""" if show_hb else ""
 
                 tbody_html += f"<tr><td rowspan='2' class='p-div'>{d['Barkod']}</td><td rowspan='2' class='p-div'>{d['HB Kod']}</td>{sku_cell}<td rowspan='2' class='p-div'>{d['Alt Grup']}</td>{ty_cols1}{hb_cols1}</tr><tr>{ty_cols2}{hb_cols2}</tr>"
