@@ -967,9 +967,9 @@ elif st.session_state.current_view == "bbx_paneli":
             hb_header_class = "plat-sep" if show_ty and show_hb else ""
             hb_header = f"""<th colspan="5" class="{hb_header_class}" style="padding: 6px 0; height: 58px; vertical-align: middle;">{hb_badge}<img src="{hb_l}" class="header-logo logo-light" style="height: 30px;"><img src="{hb_d}" class="header-logo logo-dark" style="height: 30px;"></th>""" if show_hb else ""
 
-            ty_sub = """<th class="shadow-cell" style="width: 65px;">Retail</th><th class="shadow-cell" style="width: 45px;">Durum</th><th class="shadow-cell">#1</th><th class="shadow-cell">#2</th><th class="shadow-cell">#3</th>""" if show_ty else ""
+            ty_sub = """<th class="shadow-cell" style="width: 75px;">Retail</th><th class="shadow-cell" style="width: 60px;">Durum</th><th class="shadow-cell">#1</th><th class="shadow-cell">#2</th><th class="shadow-cell">#3</th>""" if show_ty else ""
             hb_sub_class = "plat-sep shadow-cell" if show_ty and show_hb else "shadow-cell"
-            hb_sub = f"""<th class="{hb_sub_class}" style="width: 65px;">Retail</th><th class="shadow-cell" style="width: 45px;">Durum</th><th class="shadow-cell">#1</th><th class="shadow-cell">#2</th><th class="shadow-cell">#3</th>""" if show_hb else ""
+            hb_sub = f"""<th class="{hb_sub_class}" style="width: 75px;">Retail</th><th class="shadow-cell" style="width: 60px;">Durum</th><th class="shadow-cell">#1</th><th class="shadow-cell">#2</th><th class="shadow-cell">#3</th>""" if show_hb else ""
 
             tbody_html = ""
             for d in filtered_data:
