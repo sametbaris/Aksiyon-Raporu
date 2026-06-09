@@ -703,9 +703,9 @@ elif st.session_state.current_view == "bbx_paneli":
             border-right: none !important; 
         }
         
-        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (44px OFFSET - SIFIR BOŞLUK) */
+        /* GÖLGELİ VE SABİT BAŞLIK SİHİRBAZLIĞI (58px OFFSET - SIFIR BOŞLUK) */
         .bbx-table thead tr:nth-child(1) th { top: 0px !important; box-shadow: none !important; border-bottom: none !important; }
-        .bbx-table thead tr:nth-child(2) th { top: 44px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: none !important; }
+        .bbx-table thead tr:nth-child(2) th { top: 58px !important; box-shadow: 0 8px 15px -4px var(--dynamic-shadow, rgba(0,0,0,0.15)) !important; border-bottom: 1px solid rgba(128,128,128,0.1) !important; border-top: none !important; }
         
         /* DÜZELTME: İlk satırda Barkod, SKU gibi rowspan=2 olan hücrelere gölgeyi geri getiriyoruz */
         .bbx-table thead tr:nth-child(1) th[rowspan="2"] { 
@@ -783,38 +783,7 @@ elif st.session_state.current_view == "bbx_paneli":
             hb_l = LOGOS.get("Hepsiburada", {}).get("light", "")
             hb_d = LOGOS.get("Hepsiburada", {}).get("dark", "")
             
-            html_table = f"""
-            <div class="bbx-table-wrapper">
-            <table class="bbx-table">
-                <thead>
-                    <tr>
-                        <th rowspan="2">Barkod</th>
-                        <th rowspan="2">HB Kod</th>
-                        <th rowspan="2">SKU</th>
-                        <th rowspan="2">Alt Grup</th>
-                        <th colspan="4" style="padding: 6px 0; height: 44px;">
-                            <img src="{ty_l}" class="header-logo logo-light" style="height: 32px;">
-                            <img src="{ty_d}" class="header-logo logo-dark" style="height: 32px;">
-                        </th>
-                        <th colspan="4" class="plat-sep" style="padding: 6px 0; height: 44px;">
-                            <img src="{hb_l}" class="header-logo logo-light" style="height: 32px;">
-                            <img src="{hb_d}" class="header-logo logo-dark" style="height: 32px;">
-                        </th>
-                    </tr>
-                    <tr>
-                        <th style="width: 45px;">Durum</th>
-                        <th>#1</th>
-                        <th>#2</th>
-                        <th>#3</th>
-                        <th class="plat-sep" style="width: 45px;">Durum</th>
-                        <th>#1</th>
-                        <th>#2</th>
-                        <th>#3</th>
-                    </tr>
-                </thead>
-                <tbody>
-            """
-            
+            tbody_html = ""
             for row in raw_data:
                 while len(row) < 16: row.append("")
                 barkod, sku = str(row[0]).strip(), str(row[2]).strip()
@@ -864,9 +833,48 @@ elif st.session_state.current_view == "bbx_paneli":
                 else:
                     sku_cell = f"<td rowspan='2' class='bbx-sku p-div'>{sku}</td>"
 
-                html_table += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td>{sku_cell}<td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div plat-sep'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
-                
-            html_table += "</tbody></table></div>"
+                tbody_html += f"<tr><td rowspan='2' class='p-div'>{barkod}</td><td rowspan='2' class='p-div'>{hb_kod}</td>{sku_cell}<td rowspan='2' class='p-div'>{alt_grup}</td><td rowspan='2' class='p-div'><div class='status-dot {ty_dot}'></div></td><td class='n-b-b'>{ts1}</td><td class='n-b-b'>{ts2}</td><td class='n-b-b'>{ts3}</td><td rowspan='2' class='p-div plat-sep'><div class='status-dot {hb_dot}'></div></td><td class='n-b-b'>{hs1}</td><td class='n-b-b'>{hs2}</td><td class='n-b-b'>{hs3}</td></tr><tr><td class='n-b-t p-div'>{tf1}</td><td class='n-b-t p-div'>{tf2}</td><td class='n-b-t p-div'>{tf3}</td><td class='n-b-t p-div'>{hf1}</td><td class='n-b-t p-div'>{hf2}</td><td class='n-b-t p-div'>{hf3}</td></tr>"
+            
+            # Ana başlıkta görünecek sayıları belirliyoruz
+            ty_alarm_count = len(ty_alarm_data)
+            hb_alarm_count = len(hb_alarm_data)
+            
+            ty_badge = f"<div style='font-size: 10px; color: #ff1744; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>🚨 {ty_alarm_count} Alarm</div>" if ty_alarm_count > 0 else f"<div style='font-size: 10px; color: #00b84c; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>✨ Kusursuz</div>"
+            hb_badge = f"<div style='font-size: 10px; color: #ff1744; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>🚨 {hb_alarm_count} Alarm</div>" if hb_alarm_count > 0 else f"<div style='font-size: 10px; color: #00b84c; font-weight: 700; letter-spacing: 0.5px; text-transform: none; margin-bottom: 3px;'>✨ Kusursuz</div>"
+
+            html_table = f"""
+            <div class="bbx-table-wrapper">
+            <table class="bbx-table">
+                <thead>
+                    <tr>
+                        <th rowspan="2" class="shadow-cell">Barkod</th>
+                        <th rowspan="2" class="shadow-cell">HB Kod</th>
+                        <th rowspan="2" class="shadow-cell">SKU</th>
+                        <th rowspan="2" class="shadow-cell">Alt Grup</th>
+                        <th colspan="4" style="padding: 6px 0; height: 58px; vertical-align: middle;">
+                            {ty_badge}
+                            <img src="{ty_l}" class="header-logo logo-light" style="height: 30px;">
+                            <img src="{ty_d}" class="header-logo logo-dark" style="height: 30px;">
+                        </th>
+                        <th colspan="4" class="plat-sep" style="padding: 6px 0; height: 58px; vertical-align: middle;">
+                            {hb_badge}
+                            <img src="{hb_l}" class="header-logo logo-light" style="height: 30px;">
+                            <img src="{hb_d}" class="header-logo logo-dark" style="height: 30px;">
+                        </th>
+                    </tr>
+                    <tr>
+                        <th class="shadow-cell" style="width: 45px;">Durum</th>
+                        <th class="shadow-cell">#1</th>
+                        <th class="shadow-cell">#2</th>
+                        <th class="shadow-cell">#3</th>
+                        <th class="plat-sep shadow-cell" style="width: 45px;">Durum</th>
+                        <th class="shadow-cell">#1</th>
+                        <th class="shadow-cell">#2</th>
+                        <th class="shadow-cell">#3</th>
+                    </tr>
+                </thead>
+                <tbody>
+            """ + tbody_html + "</tbody></table></div>"
             
             b_all, b_ty, b_hb = io.BytesIO(), io.BytesIO(), io.BytesIO()
             with pd.ExcelWriter(b_all, engine='openpyxl') as w: pd.DataFrame(all_export_data).to_excel(w, index=False)
