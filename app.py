@@ -901,14 +901,14 @@ elif st.session_state.current_view == "bbx_paneli":
                 filtered_data.append(d)
                 
             tr_time_now = datetime.utcnow() + timedelta(hours=3)
-            date_str = tr_time_now.strftime("%d.%m.%Y")
+            date_str = tr_time_now.strftime("%Y-%m-%d %H:%M:%S")
             
             if alarm_filter == "🔴 Trendyol Alarmları":
                 excel_filename = f"TY_BBX_Alarm_{date_str}.xlsx"
             elif alarm_filter == "🔴 Hepsiburada Alarmları":
                 excel_filename = f"HB_BBX_Alarm_{date_str}.xlsx"
             else:
-                excel_filename = f"Buybox_Filtreli_Rapor_{date_str}.xlsx"
+                excel_filename = f"Buybox_Takibi_Tümü_{date_str}.xlsx"
                 
             with col_btn_group:
                 st.markdown("<div style='margin-top: 23px;'></div>", unsafe_allow_html=True)
