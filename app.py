@@ -511,6 +511,7 @@ def reset_filters():
 if st.session_state.current_view == "ana_sayfa":
 
     # ================= MAIN =================
+    # ================= MAIN =================
     col_title, col_update = st.columns([3, 1])
 
     with col_title:
@@ -536,13 +537,15 @@ if st.session_state.current_view == "ana_sayfa":
         else:
             st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
             
-        # POP-UP (MODAL) TETİKLEYİCİSİ
-        if st.button("🔐 BBX Paneli", use_container_width=True):
-            if not st.session_state.bbx_authenticated:
-                login_dialog()
-            else:
-                st.session_state.current_view = "bbx_paneli"
-                st.rerun()
+        # POP-UP (MODAL) TETİKLEYİCİSİ - Butonu daraltıp sağa yaslamak için görünmez bir alt sütun açıyoruz
+        _, btn_col = st.columns([1, 1.4]) 
+        with btn_col:
+            if st.button("🔐 BBX Paneli", use_container_width=True):
+                if not st.session_state.bbx_authenticated:
+                    login_dialog()
+                else:
+                    st.session_state.current_view = "bbx_paneli"
+                    st.rerun()
 
     if df_data is not None:
         mapping = get_column_mapping(df_data)
