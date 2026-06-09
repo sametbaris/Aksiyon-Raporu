@@ -686,7 +686,7 @@ elif st.session_state.current_view == "bbx_paneli":
             border-radius: 8px; 
             padding: 0px; 
             overflow: auto; 
-            max-height: 65vh; 
+            max-height: 70vh; 
             margin-top: 5px; 
             box-shadow: 0 2px 4px rgba(0,0,0,0.05); 
         }
@@ -918,8 +918,36 @@ elif st.session_state.current_view == "bbx_paneli":
                 with btn_excel:
                     if filtered_data:
                         b_io = io.BytesIO()
+                        
+                        export_df = pd.DataFrame([d["_export_dict"] for d in filtered_data])
+                        
+                        price_cols = [c for c in export_df.columns if "Fiyat" in c or "Retail" in c or "F1" in c or "F2" in c or "F3" in c or "Ret" in c]
+                        for c in price_cols:
+                            export_df[c] = export_df[c].apply(parse_price)
+                            
+                        if "Barkod" in export_df.columns:
+                            def parse_barcode(v):
+                                try: return int(float(str(v).replace(' ', '')))
+                                except: return v
+                            export_df["Barkod"] = export_df["Barkod"].apply(parse_barcode)
+                            
                         with pd.ExcelWriter(b_io, engine='openpyxl') as w:
-                            pd.DataFrame([d["_export_dict"] for d in filtered_data]).to_excel(w, index=False)
+                            export_df.to_excel(w, index=False, sheet_name='BBX_Raporu')
+                            worksheet = w.sheets['BBX_Raporu']
+                            for idx, col_name in enumerate(export_df.columns):
+                                excel_col_idx = idx + 1
+                                col_letter = openpyxl.utils.get_column_letter(excel_col_idx)
+                                if col_name in price_cols:
+                                    worksheet.column_dimensions[col_letter].width = 12
+                                    for row in range(2, len(export_df) + 2):
+                                        worksheet.cell(row=row, column=excel_col_idx).number_format = '#,##0.00'
+                                elif col_name == "Barkod":
+                                    worksheet.column_dimensions[col_letter].width = 16
+                                    for row in range(2, len(export_df) + 2):
+                                        worksheet.cell(row=row, column=excel_col_idx).number_format = '0'
+                                else:
+                                    worksheet.column_dimensions[col_letter].width = 15
+                        
                         st.download_button("📥 Ekrandaki Tabloyu İndir", b_io.getvalue(), excel_filename, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
                     else:
                         st.button("📥 Tablo Boş", disabled=True, use_container_width=True, key="empty_bbx")
@@ -953,11 +981,11 @@ elif st.session_state.current_view == "bbx_paneli":
                 hb_ret_ui = f"{d['HB Ret']} TL" if d['HB Ret'] != "-" else "-"
                 
                 ty_td_class = "p-div"
-                ty_cols1 = f"""<td rowspan='2' class='{ty_td_class}' style='font-weight:600; color:var(--text-color);'>{ty_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_ty_dot']}'></div></td><td class='n-b-b'>{d['_ts1']}</td><td class='n-b-b'>{d['_ts2']}</td><td class='n-b-b'>{d['_ts3']}</td>""" if show_ty else ""
+                ty_cols1 = f"""<td rowspan='2' class='{ty_td_class}' style='font-weight:600; color:var(--text-color); font-size: 11.5px;'>{ty_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_ty_dot']}'></div></td><td class='n-b-b'>{d['_ts1']}</td><td class='n-b-b'>{d['_ts2']}</td><td class='n-b-b'>{d['_ts3']}</td>""" if show_ty else ""
                 ty_cols2 = f"""<td class='n-b-t p-div'>{d['_tf1']}</td><td class='n-b-t p-div'>{d['_tf2']}</td><td class='n-b-t p-div'>{d['_tf3']}</td>""" if show_ty else ""
                 
                 hb_td_class = "p-div plat-sep" if show_ty and show_hb else "p-div"
-                hb_cols1 = f"""<td rowspan='2' class='{hb_td_class}' style='font-weight:600; color:var(--text-color);'>{hb_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_hb_dot']}'></div></td><td class='n-b-b'>{d['_hs1']}</td><td class='n-b-b'>{d['_hs2']}</td><td class='n-b-b'>{d['_hs3']}</td>""" if show_hb else ""
+                hb_cols1 = f"""<td rowspan='2' class='{hb_td_class}' style='font-weight:600; color:var(--text-color); font-size: 11.5px;'>{hb_ret_ui}</td><td rowspan='2' class='p-div'><div class='status-dot {d['_hb_dot']}'></div></td><td class='n-b-b'>{d['_hs1']}</td><td class='n-b-b'>{d['_hs2']}</td><td class='n-b-b'>{d['_hs3']}</td>""" if show_hb else ""
                 hb_cols2 = f"""<td class='n-b-t p-div'>{d['_hf1']}</td><td class='n-b-t p-div'>{d['_hf2']}</td><td class='n-b-t p-div'>{d['_hf3']}</td>""" if show_hb else ""
 
                 tbody_html += f"<tr><td rowspan='2' class='p-div'>{d['Barkod']}</td><td rowspan='2' class='p-div'>{d['HB Kod']}</td>{sku_cell}<td rowspan='2' class='p-div'>{d['Alt Grup']}</td>{ty_cols1}{hb_cols1}</tr><tr>{ty_cols2}{hb_cols2}</tr>"
